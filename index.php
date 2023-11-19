@@ -1,6 +1,7 @@
 <?php
 
 
+phpinfo();
 
 use app\TelegramBot;
 require_once 'TelegramBot.php';
