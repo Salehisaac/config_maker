@@ -21,6 +21,10 @@ $action = "sendMessage";
 
 $bot = new TelegramBot($token);
 
+$data = file_get_contents("php://input");
+$update = json_decode($data, true);
+vardump($update);
+
 
 
 $result = file_get_contents($url);
@@ -32,47 +36,14 @@ $chatId = $arrResult['result'][0]["message"]["chat"]["id"];
 $text = $arrResult['result'][$length - 1]['message']['text'] ;
 
 
-/*if (!empty($arrResult['result'][$length - 2]['message']['text']))
-{
-
-    $before_text = $arrResult['result'][$length - 2]['message']['text'];
-}*/
-
-/*var_dump($arrResult['result'][$length - 2]['message']['text']);*/
-
-
-/*if ($arrResult['result'][$length - 1]['message']['text'] == '/start')
-{
-    $newUrl = "https://api.telegram.org/bot6809114912:AAEnGhJ_em9lf9I1uofJAXfkiiVd8AgFOyE" ;
-    $userMsg = 'سلام خوش آمدید';
-    $chat_id = $arrResult['result'][0]["message"]["chat"]["id"];
-    $action = '/sendmessage';
-    $finalUrl = $newUrl . $action . '?chat_id=' . $chat_id . '&text=' . $userMsg ;
-    file_get_contents($finalUrl);
-
-}
-
-if (empty($bot->getUserName()))
-{
-
-    $bot->sendMessage($chat_id , 'نام را وارد کنید : ');
-
-    $bot->setUserName('hi');
-    $newUrl = "https://api.telegram.org/bot6809114912:AAEnGhJ_em9lf9I1uofJAXfkiiVd8AgFOyE" ;
-    $userMsg = ' نام شما ' . $bot->getUserName() . ' است ';
-    $chat_id = $arrResult['result'][0]["message"]["chat"]["id"];
-    $action = '/sendmessage';
-    $finalUrl = $newUrl . $action . '?chat_id=' . $chat_id . '&text=' . $userMsg ;
-    file_get_contents($finalUrl);
-
-}*/
-
-
-$bot = new TelegramBot($token);
 
 
 
-$bot->handleInOrder($chatId , $text);
+
+
+
+
+// $bot->handleInOrder($chatId , $text);
 
 // Process the received data
 
