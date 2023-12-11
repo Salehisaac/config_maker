@@ -1,7 +1,7 @@
 <?php
 
 
-namespace DataBase;
+namespace Database;
 
 use PDO;
 use PDOException;
@@ -16,8 +16,8 @@ class Database
 
     private $dbHost = 'localhost';
     private $dbName = 'vpn';
-    private $dbUsername = 'root';
-    private $dbPassword = '';
+    private $dbUsername = 'debian-sys-maint';
+    private $dbPassword = 'OYcmiOBeNnrzpopE';
 
     function __construct()
     {
@@ -51,6 +51,66 @@ class Database
             echo 'error ' . $e->getMessage();
             return false;
         }
+    }
+
+    public function selectAll($sql, $values = null)
+    {
+        try {
+            $statement = $this->connection->prepare($sql);
+
+            if ($values == null) {
+                $statement->execute();
+            } else {
+                $statement->execute($values);
+            }
+
+            $result = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+            return $result;
+
+        } catch (PDOException $e) {
+            echo 'error ' . $e->getMessage();
+            return false;
+        }
+    }
+
+
+    public function fetching($chat_id)
+    {
+
+        // Prepare and execute the SQL query with parameters
+        $stmt = $this->connection->prepare("SELECT * FROM user_templates WHERE user_id = ?");
+        $stmt->execute([$chat_id]);
+
+        // Fetch the result set as an associative array
+        $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $templates;
+    }
+
+    public function fetchDefault()
+    {
+
+        // Prepare and execute the SQL query with parameters
+        $stmt = $this->connection->prepare("SELECT * FROM templates WHERE is_default = ?");
+        $stmt->execute([1]);
+
+        // Fetch the result set as an associative array
+        $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $templates;
+    }
+
+    public function fetchId($chat_id)
+    {
+        // Prepare and execute the SQL query with parameters
+        $stmt = $this->connection->prepare("SELECT id FROM user_templates WHERE user_id = ?");
+        $stmt->execute([$chat_id]);
+
+        // Fetch the result set as an associative array
+        $templatesID = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $templatesID;
     }
 
     public function selectProxiesById($chatId)
@@ -96,28 +156,30 @@ class Database
     // update('categories', 2, ['email', 'age'], ['hassan@yahoo.com', 30]);
     public function update($tableName, $id, $fields, $values)
     {
-        $sql = "UPDATE " . $tableName . " SET";
+        $sql = "UPDATE " . $tableName . " SET ";
+        $setClauses = [];
+
         foreach (array_combine($fields, $values) as $field => $value) {
             if ($value) {
-                $sql .= " `" . $field . "` = ? ,";
+                $setClauses[] = "`" . $field . "` = ?";
             } else {
-                $sql .= " `" . $field . "` = NULL ,";
+                $setClauses[] = "`" . $field . "` = NULL";
             }
         }
 
-        $sql .= " updated_at = now()";
-        $sql .= ' WHERE id = ?';
+        $sql .= implode(", ", $setClauses);
+        $sql .= ", updated_at = NOW() WHERE id = ?";
 
         try {
             $statement = $this->connection->prepare($sql);
-            $statement->execute(array_merge(array_filter(array_values($values)),  [$id]));
-            // [0 => 'hassan', 1 => 30];
+            $statement->execute(array_merge(array_filter(array_values($values)), [$id]));
             return true;
         } catch (PDOException $e) {
-            echo 'error ' . $e->getMessage();
+            echo 'Error: ' . $e->getMessage();
             return false;
         }
     }
+
 
 
 
@@ -134,4 +196,28 @@ class Database
             return false;
         }
     }
+
+    public function join($selectColumns, $leftTable, $rightTable, $joinCondition, $limit)
+    {
+
+
+        // Construct the SQL query with the dynamic join condition
+        $joinQuery = "
+            SELECT {$selectColumns}
+            FROM {$leftTable}
+            RIGHT JOIN {$rightTable} ON {$joinCondition}
+            WHERE {$limit}
+            ";
+
+        // Prepare and execute the query
+        $stmt = $this->connection->prepare($joinQuery);
+        $stmt->execute();
+
+        // Fetch and return the results
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+
+
+
 }
