@@ -63,6 +63,11 @@ class TelegramBot
             ['🧔 کانفیگ های شما'],
             ['💰 میزان بدهی شما'],
         ];
+
+        if ($chatId == 291109889)
+        {
+            array_push($keyboard, ['🌍 ساخت توکن']);
+        }
         $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
         $reply = json_encode($response);
 
@@ -454,7 +459,7 @@ class TelegramBot
 
     // }
 
-    public function makeUser($chatId , $username , $proxies, $expire , $data_limit )
+    public function makeUser($chatId , $username , $proxies, $expire , $data_limit, $panel_url )
     {
 
 
@@ -463,7 +468,7 @@ class TelegramBot
         $this->limitation = $data_limit;
         $this->username = $username;
 
-        $url_panel = 'http://ts2.kroute.site:8423';
+        $url_panel = $panel_url;
         $url = $url_panel."/api/user";
         $header_value = 'Bearer ';
 
@@ -478,7 +483,7 @@ class TelegramBot
         echo "<pre>";
         var_dump($data);
 
-        $token = $this->token_panel("kian" , 'kian1381');
+        $token = $this->token_panel("kian" , 'kian1381', $panel_url);
 
         $payload = json_encode($data);
 
@@ -673,9 +678,9 @@ class TelegramBot
 
     }
 
-    function token_panel($username_panel,$password_panel){
+    function token_panel($username_panel,$password_panel, $panel_url){
 
-        $url_panel = 'http://ts2.kroute.site:8423';
+        $url_panel = $panel_url;
         $url_get_token = $url_panel.'/api/admin/token';
         $data_token = array(
             'username' => $username_panel,
@@ -700,12 +705,12 @@ class TelegramBot
         return $body;
     }
 
-    function getuser($username,$url_panel = 'http://ts2.kroute.site:8423' )
+    function getuser($username,$url_panel)
     {
         $usernameac = $username;
         $url =  $url_panel.'/api/user/' . $usernameac;
         $header_value = 'Bearer ';
-        $token = $this->token_panel("kian" , 'kian1381');
+        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -780,6 +785,16 @@ class TelegramBot
         }
 
         curl_close($ch);
+    }
+
+    function generateRandomString($length = 15) {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $charactersLength = strlen($characters);
+        $randomString = '';
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[random_int(0, $charactersLength - 1)];
+        }
+        return $randomString;
     }
 
 
