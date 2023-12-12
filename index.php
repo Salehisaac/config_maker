@@ -2,7 +2,7 @@
 use app\TelegramBot;
 use DataBase\Database;
 
-
+date_default_timezone_set('Asia/Tehran');
 require_once 'TelegramBot.php';
 require_once 'Database.php';
 
@@ -10,6 +10,8 @@ $token = '6813131583:AAHhfKYcObFrXsuzZ-7oZD_ldi6X2rU4K-k';
 
 
 
+$db = new Database();
+$bot = new TelegramBot($token);
 
 
 // Fetching and decoding incoming webhook data
@@ -20,19 +22,16 @@ $update = json_decode($content, true);
 $bot = new TelegramBot($token);
 
 // Check if it's a message or callback query
-if (isset($update['message']))
+if (isset($update['message']) && $update['message']['text'] == '/start' )
 {
     $text = $update['message']['text'];
     $chat_id = $update['message']['chat']['id'];
 
     $user = $bot->findUser($chat_id);
 
+
+
     // Check if the user exists
-    if (!$user)
-    {
-        $db = new Database();
-        $db->insert('users', ['id', 'name', 'username'], [$chat_id, $update['chat']['first_name'], $update['chat']['username']] );
-    }
 
     $bot->sendMessage($chat_id, 'خوش آمدید');
 
@@ -53,7 +52,7 @@ if (isset($update['message']))
 
     if($panels == NULL)
     {
-        $bot->sendMessage($chat_id,'hi');
+
         $templates = $bot->findDefaultTemplates();
         $buttons = [];
 
@@ -73,6 +72,29 @@ if (isset($update['message']))
 
     $bot->sendMessage($chat_id, 'پنل های پیشنهادی شما:', $replyMarkup);
 }
+elseif (isset($update['message']) && $update['message']['text'] == '🌍 ساخت توکن')
+{
+    $currentDateTime = new DateTime();
+
+    // Add 10 minutes to the current time
+    $tenMinutesLater = clone $currentDateTime;
+    $tenMinutesLater->add(new DateInterval('PT10M'));
+
+    // Format the datetime in a way suitable for database insertion
+    $datetimeToInsert = $tenMinutesLater->format('Y-m-d H:i:s');
+    var_dump($datetimeToInsert);
+
+
+    $login_token = $bot->generateRandomString(30);
+    $db->insert('users',['token', 'token_expire'],[$login_token, $datetimeToInsert]);
+    $bot->sendMessage(291109889,'inserted');
+}
+
+// elseif (isset($update['message']) && count($update['message']['text'])== 30)
+// {
+//     $bot->sendMessage(291109889, 'hi');
+// }
+
 
 
 elseif (isset($update['callback_query'])) {
@@ -118,6 +140,8 @@ elseif (isset($update['callback_query'])) {
             $price = $selected['default_price'];
             $price_show = $price/1000;
         }
+
+
 
         $username = $update['callback_query']['message']['chat']['username'] . '_'. $countConfigs+1;
 
@@ -191,9 +215,10 @@ elseif (isset($update['callback_query'])) {
 
     elseif(explode( " " ,$callbackData)[0] == 'خرید')
     {
-
+        $bot->answerCallbackQuery($callbackQueryId, 'You clicked on the ' .  $callbackData . ' button!');
 
         $db = new Database();
+
 
         $configs = $db->selectAll("SELECT * FROM configs WHERE user_id = ? ", [$chat_id]);
         $countConfigs = count($configs);
@@ -206,6 +231,9 @@ elseif (isset($update['callback_query'])) {
             $selected = $db->select("SELECT * FROM templates WHERE `id` = ? " , [explode( " " ,$callbackData)[1]]);
 
         }
+
+        $panel = $db->join('*' , 'templates' , 'panels' , 'templates.panel_id = panels.id' , 'templates.panel_id = ' . $selected['panel_id'] );
+
         $username = $update['callback_query']['message']['chat']['username'] . '_'. $countConfigs+1;
 
         $proxies = json_decode($selected['proxy'] , true);
@@ -230,9 +258,9 @@ elseif (isset($update['callback_query'])) {
 
 
 
-        $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit);
+        $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
 
-        $config = $bot->getuser($username)['links'][0];
+        $config = $bot->getuser($username, $panel['url'])['links'][0];
 
         if($config)
         {
