@@ -8,6 +8,7 @@ use DateTime;
 
 require_once 'Database.php';
 
+
 class TelegramBot
 {
 
@@ -61,7 +62,7 @@ class TelegramBot
         $keyboard = [
             ['🌍 کانفیگ های پیشنهادی'],
             ['🧔 کانفیگ های شما'],
-            ['💰 میزان بدهی شما'],
+            ['میزان بدهی شما'],
         ];
 
         if ($chatId == 291109889)
@@ -88,8 +89,11 @@ class TelegramBot
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             $response = curl_exec($ch);
-            echo $response;
+
+            $result = json_decode($response, true);
+            $messageId = $result['result']['message_id'];
             curl_close($ch);
+            return $messageId;
         }
 
         else
@@ -107,9 +111,13 @@ class TelegramBot
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             $response = curl_exec($ch);
-            echo $response;
+
+            $result = json_decode($response, true);
+            $messageId = $result['result']['message_id'];
             curl_close($ch);
+            return $messageId;
         }
+
 
 
 
@@ -306,158 +314,7 @@ class TelegramBot
 
 
 
-    // public function handel($chatId , $text, $before = null)
-    // {
 
-    //     $db = new Database();
-
-    //     if ($text === '/start')
-    //     {
-
-    //         // Start a conversation
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'خوش آمدید لطفا اطلاعات لازم را وارد کنید'
-    //         );
-    //     }
-
-
-    //     elseif (strpos($text, 'set username') === 0)
-    //     {
-
-    //         // Extract username from the command
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'نام کاربری را وارد کنید :',
-    //         );
-
-
-    //     }
-    //     elseif (preg_match('/^[a-zA-Z ]*$/', $text) && strpos($before, 'set username') === 0 )
-    //     {
-
-
-    //         $db->insert('users' , ['username'] , [$text]);
-
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'thank you username just set'
-    //         );
-
-    //         $_SESSION['username'] = $text;
-
-    //     }
-
-
-    //     elseif (strpos($text, 'set panel url') === 0 ) {
-    //         // Extract password from the command
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'Please provide your panel_url:'
-    //         );
-    //     }
-
-    //     elseif (preg_match('/^(https?|ftp):\/\/([a-zA-Z0-9.-]+)(:[0-9]+)?$/', $text) && strpos($before, 'set panel url') === 0)
-    //     {
-    //         $db->update('users' , $chatId , ['panel_url'] , [$text]);
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'thank you url just set'
-    //         );
-
-    //     }
-
-
-    //     elseif (strpos($text, 'set limit') === 0) {
-    //         // Extract password from the command
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'Please provide your limitation:'
-    //         );
-    //     }
-
-    //     elseif (is_numeric($text) && strpos($before, 'set limit') === 0)
-    //     {
-    //         $username = $_SESSION['username'];
-    //         $db->update('users' , $chatId , ['limitation'] , [$text]);
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'thank you limit just set ' . $username
-    //         );
-
-
-    //     }
-
-    //     elseif (strpos($text, 'set proxy') === 0) {
-    //         // Handle setting proxies
-    //         $this->setProxy($chatId, $text, $before);
-    //     }
-
-    //     elseif (in_array($text, ['Vless', 'Vmess']) && strpos($before, 'set proxy') === 0) {
-
-    //         // Handle the user's choice based on the selected option
-    //         $this->handleProxyOption($chatId, $text);
-    //     }
-
-    //     elseif (strpos($text, 'بله') === 0 && strpos($before, 'Vless') === 0) {
-
-    //         // Handle the user's choice based on the selected option
-    //         $nameprotocol = array();
-    //         $nameprotocol['vless']['flow'] = 'xtls-rprx-vision';
-    //         $serializedData = json_encode($nameprotocol);
-    //         $db->update('users' , $chatId , ['proxies'] , [$serializedData]);
-
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'پروکسی تنظیم شد'
-    //         );
-    //         $_SESSION['command'] = 'wannaContinue';
-
-    //     }
-
-    //     elseif (strpos($text, 'خیر') === 0 && strpos($before, 'Vless') === 0) {
-
-
-    //         $nameprotocol = array();
-    //         $existingArray['vless'] = array();
-    //         $serializedData = json_encode($nameprotocol);
-    //         $db->update('users' , $chatId , ['proxies'] , [$serializedData]);
-
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'پروکسی تنظیم شد'
-    //         );
-    //         $_SESSION['command'] = 'wannaContinue';
-    //     }
-
-    //     elseif (strpos($text, 'set expire') === 0) {
-    //         // Handle setting proxies
-    //         $this->setExpire($chatId, $text, $before);
-    //     }
-
-    //     elseif (in_array($text, ['30 روزه', '60 روزه']) && strpos($before, 'set expire') === 0) {
-
-    //         // Handle the user's choice based on the selected option
-    //         $this->handlExpireOption($chatId, $text);
-    //     }
-
-
-
-
-
-    //     else {
-
-    //         echo '<pre>';
-    //         var_dump($text);
-
-    //         // If none of the expected commands or responses are received, provide guidance
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'Sorry, I didn\'t understand. Please follow the instructions.'
-    //         );
-    //     }
-
-    // }
 
     public function makeUser($chatId , $username , $proxies, $expire , $data_limit, $panel_url )
     {
@@ -484,6 +341,7 @@ class TelegramBot
         var_dump($data);
 
         $token = $this->token_panel("kian" , 'kian1381', $panel_url);
+        var_dump($token);
 
         $payload = json_encode($data);
 
@@ -638,7 +496,7 @@ class TelegramBot
 
 
 
-            $this->makeUser($chatId);
+
             $db->update('users', $chatId, ['command'], ['fenish' ]);
 
 
@@ -681,7 +539,7 @@ class TelegramBot
     function token_panel($username_panel,$password_panel, $panel_url){
 
         $url_panel = $panel_url;
-        $url_get_token = $url_panel.'/api/admin/token';
+        $url_get_token = $panel_url.'/api/admin/token';
         $data_token = array(
             'username' => $username_panel,
             'password' => $password_panel
@@ -762,6 +620,14 @@ class TelegramBot
         return $result;
     }
 
+    function findDefaultPanels()
+    {
+        $db = new Database();
+        $panels = $db->selectAll("SELECT * FROM panels WHERE is_default = ?" , [1]);
+
+        return $panels;
+    }
+
     public function answerCallbackQuery($callbackQueryId, $text)
     {
         $apiURL = 'https://api.telegram.org/bot6813131583:AAHhfKYcObFrXsuzZ-7oZD_ldi6X2rU4K-k/answerCallbackQuery';
@@ -797,7 +663,170 @@ class TelegramBot
         return $randomString;
     }
 
+    function deleteMessage($token, $chatId, $messageId)
+    {
 
+        $apiUrl = "https://api.telegram.org/bot$token/";
+
+
+        $deleteUrl = $apiUrl . "deleteMessage?chat_id=$chatId&message_id=$messageId";
+
+
+
+        $ch = curl_init($deleteUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+
+        $result = json_decode($response, true);
+
+
+        if ($result['ok']) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function makeQRcode($url)
+    {
+        $url = 'https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=http%3A%2F%2F' . $url . '%2F&choe=UTF-8';
+
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+
+        if (curl_errno($ch)) {
+            echo 'cURL error: ' . curl_error($ch);
+            return false;
+        }
+
+        curl_close($ch);
+        return $response;
+    }
+
+    public function sendImage($chat_id ,$imageData, $caption, $username)
+    {
+        $url = "https://api.telegram.org/bot{$this->botToken}/sendPhoto";
+
+        // Create a temporary file to store the image data
+        $tempFile = tempnam(sys_get_temp_dir(), 'telegram_image');
+        file_put_contents($tempFile, $imageData);
+
+        $keyboard = [
+            ['🌍 کانفیگ های پیشنهادی'],
+            ['🧔 کانفیگ های شما'],
+            ['میزان بدهی شما'],
+        ];
+
+
+        $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
+        $reply = json_encode($response);
+
+        // Prepare the cURL request with multipart/form-data
+        $postFields = [
+            'chat_id' => $chat_id,
+            'photo' => curl_file_create($tempFile, 'image/png', 'image.png'),
+            'caption' => "{$caption}
+            
+            
+            {$username}",
+            'reply_markup' => $reply,
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+        curl_close($ch);
+
+        // Delete the temporary file
+        unlink($tempFile);
+
+        return $result;
+    }
+
+    public function search($username)
+    {
+        $db = new Database();
+        $trimmedString = preg_replace('/_\d+$/', '', $username);
+        $configs = $db->selectAll("SELECT * FROM `configs` WHERE `name` LIKE ?" , ["%$trimmedString%"]);
+        return $configs;
+
+    }
+
+    public function directSearch($username)
+    {
+        $db = new Database();
+        $configs = $db->select("SELECT * FROM `configs` WHERE `name` = ?" , ["$username"]);
+        return $configs;
+
+    }
+
+    function getAllUsers($urlPanel) {
+        $payload = ["username" => "kian", "password" => "kian1381"];
+        $token = $this->token_panel("kian", 'kian1381', 'http://' . $urlPanel);
+
+        $headerValue = "Bearer ";
+        $headers = [
+            'Accept: application/json',
+            'Authorization: ' . $headerValue . $token['access_token'],
+            'Content-Type: application/json',
+        ];
+
+        $url = 'http://' .$urlPanel . "/api/users/";
+
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HTTPGET, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);  // Disable automatic redirect
+        curl_setopt($ch, CURLOPT_VERBOSE, true);  // Enable verbose output
+        curl_setopt($ch, CURLOPT_HEADER, true);   // Include headers in the output
+
+        $output = curl_exec($ch);
+
+        // Get response code and location header
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $locationHeader = curl_getinfo($ch, CURLINFO_REDIRECT_URL);
+
+        // If it's a redirect, follow it manually
+        if ($httpCode == 307 && !empty($locationHeader)) {
+            curl_setopt($ch, CURLOPT_URL, $locationHeader);
+            $output = curl_exec($ch);
+        }
+
+        // Debugging info
+
+
+        // Check for cURL errors
+        if ($output === false) {
+            echo "cURL Error: " . curl_error($ch) . "\n";
+        }
+
+        // Separate headers and body
+        list($responseHeaders, $responseBody) = explode("\r\n\r\n", $output, 2);
+
+        // Debugging info for headers
+        echo "Response Headers:\n";
+        var_dump($responseHeaders);
+
+        curl_close($ch);
+
+        $dataUser = json_decode($responseBody, true);
+
+        // Debugging info for decoded JSON
+        echo "Decoded JSON:\n";
+        var_dump($dataUser);
+
+        return $dataUser;
+    }
 
 
 
