@@ -122,6 +122,8 @@
       <path value="$PROJECT_DIR$/example-app/vendor/symfony/var-dumper" />
       <path value="$PROJECT_DIR$/example-app/vendor/symfony/yaml" />
       <path value="$PROJECT_DIR$/example-app/vendor/theseer/tokenizer" />
+      <path value="$PROJECT_DIR$/vendor/composer" />
+      <path value="$PROJECT_DIR$/vendor/telegram-bot/api" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.1" />

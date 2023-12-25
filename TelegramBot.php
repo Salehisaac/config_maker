@@ -52,27 +52,35 @@ class TelegramBot
 
 
         }*/
-    public function sendMessage($chatId, $text , $Myreply = null)
+    public function sendMessage($chatId, $text , $Myreply = null )
     {
 
 
 
         $url = $this->apiUrl . "sendMessage";
+        $db = new Database();
+        $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chatId] );
 
-        $keyboard = [
-            ['🌍 کانفیگ های پیشنهادی'],
-            ['🧔 کانفیگ های شما'],
-            ['میزان بدهی شما'],
-        ];
-
-        if ($chatId == 291109889)
+        if($user['is_verified'] == 'approved' && $Myreply == null)
         {
-            array_push($keyboard, ['🌍 ساخت توکن']);
+            $keyboard = [
+                ['🌍 کانفیگ های پیشنهادی'],
+                ['🧔 کانفیگ های شما'],
+                ['میزان بدهی شما'],
+                ['تماس با پشتیبانی'],
+            ];
+
+            if($user['is_admin'] == 1)
+            {
+                array_push($keyboard, ['پنل مدیریت']);
+            }
+
+
+
+
+            $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
+            $reply = json_encode($response);
         }
-        $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
-        $reply = json_encode($response);
-
-
 
         if ($Myreply != null)
         {
@@ -536,7 +544,8 @@ class TelegramBot
 
     }
 
-    function token_panel($username_panel,$password_panel, $panel_url){
+    function token_panel($username_panel,$password_panel, $panel_url)
+    {
 
         $url_panel = $panel_url;
         $url_get_token = $panel_url.'/api/admin/token';
@@ -663,10 +672,10 @@ class TelegramBot
         return $randomString;
     }
 
-    function deleteMessage($token, $chatId, $messageId)
+    function deleteMessage($chatId, $messageId)
     {
 
-        $apiUrl = "https://api.telegram.org/bot$token/";
+        $apiUrl = "https://api.telegram.org/bot{$this->botToken}/";
 
 
         $deleteUrl = $apiUrl . "deleteMessage?chat_id=$chatId&message_id=$messageId";
@@ -707,7 +716,7 @@ class TelegramBot
         return $response;
     }
 
-    public function sendImage($chat_id ,$imageData, $caption, $username)
+    public function sendImage($chat_id ,$imageData, $caption, $username , $Myreply = null)
     {
         $url = "https://api.telegram.org/bot{$this->botToken}/sendPhoto";
 
@@ -715,39 +724,99 @@ class TelegramBot
         $tempFile = tempnam(sys_get_temp_dir(), 'telegram_image');
         file_put_contents($tempFile, $imageData);
 
-        $keyboard = [
-            ['🌍 کانفیگ های پیشنهادی'],
-            ['🧔 کانفیگ های شما'],
-            ['میزان بدهی شما'],
-        ];
+        $db = new Database();
+        $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+        if($user['is_verified'] == 'approved' && $Myreply == null)
+        {
+            $keyboard = [
+                ['🌍 کانفیگ های پیشنهادی'],
+                ['🧔 کانفیگ های شما'],
+                ['میزان بدهی شما'],
+                ['تماس با پشتیبانی'],
+            ];
+
+            if($user['is_admin'] == 1)
+            {
+                array_push($keyboard, ['پنل مدیریت']);
+            }
+
+
+
+
+            $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
+            $reply = json_encode($response);
+        }
 
 
         $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
         $reply = json_encode($response);
 
-        // Prepare the cURL request with multipart/form-data
-        $postFields = [
-            'chat_id' => $chat_id,
-            'photo' => curl_file_create($tempFile, 'image/png', 'image.png'),
-            'caption' => "{$caption}
-            
-            
-            {$username}",
-            'reply_markup' => $reply,
-        ];
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $result = curl_exec($ch);
-        curl_close($ch);
 
-        // Delete the temporary file
-        unlink($tempFile);
 
-        return $result;
+
+
+
+        if ($Myreply != null)
+        {
+            $reply = $Myreply;
+
+            $postFields = [
+                'chat_id' => $chat_id,
+                'photo' => curl_file_create($tempFile, 'image/png', 'image.png'),
+                'caption' => "{$caption}
+                
+                
+                {$username}",
+                'reply_markup' => $reply,
+            ];
+
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+
+            $result = json_decode($response, true);
+            $messageId = $result['result']['message_id'];
+            curl_close($ch);
+            unlink($tempFile);
+            return $messageId;
+        }
+
+        else
+        {
+
+            $postFields = [
+                'chat_id' => $chat_id,
+                'photo' => curl_file_create($tempFile, 'image/png', 'image.png'),
+                'caption' => "{$caption}
+                
+                
+                {$username}",
+                'reply_markup' => $reply,
+            ];
+
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($ch);
+
+            $result = json_decode($response, true);
+            $messageId = $result['result']['message_id'];
+            curl_close($ch);
+            unlink($tempFile);
+            return $messageId;
+        }
+
+
+
+
     }
 
     public function search($username)
@@ -759,73 +828,159 @@ class TelegramBot
 
     }
 
-    public function directSearch($username)
+    public function directSearch($username, $panel_id)
     {
         $db = new Database();
-        $configs = $db->select("SELECT * FROM `configs` WHERE `name` = ?" , ["$username"]);
-        return $configs;
+        $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id` = ?", [$username, $panel_id]);
+        return $config;
+    }
+
+
+    function getAllUsers($urlPanel)
+    {
+
+
+        $url = 'http://ts1.kroute.site:8423/api/users';
+        $token = $this->token_panel("kian" , 'kian1381', $urlPanel);
+
+
+
+
+        $options = [
+            'http' => [
+                'header' => "Authorization: Bearer " . $token['access_token']
+            ]
+        ];
+
+        $context = stream_context_create($options);
+        $result = file_get_contents($url, false, $context);
+        $response = file_get_contents($url, false, $context);
+
+        if ($response !== false) {
+            // Process the response
+            echo $response;
+        } else {
+            // Handle error
+            echo 'Error fetching data';
+        }
+
 
     }
 
-    function getAllUsers($urlPanel) {
-        $payload = ["username" => "kian", "password" => "kian1381"];
-        $token = $this->token_panel("kian", 'kian1381', 'http://' . $urlPanel);
-
-        $headerValue = "Bearer ";
-        $headers = [
-            'Accept: application/json',
-            'Authorization: ' . $headerValue . $token['access_token'],
-            'Content-Type: application/json',
-        ];
-
-        $url = 'http://' .$urlPanel . "/api/users/";
-
+    function removeuser($url_panel,$username)
+    {
+        $url =  $url_panel.'/api/user/'.$username;
+        $header_value = 'Bearer ';
+        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
         curl_setopt($ch, CURLOPT_HTTPGET, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);  // Disable automatic redirect
-        curl_setopt($ch, CURLOPT_VERBOSE, true);  // Enable verbose output
-        curl_setopt($ch, CURLOPT_HEADER, true);   // Include headers in the output
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Accept: application/json',
+            'Authorization: ' . $header_value .  $token['access_token']
+        ));
 
         $output = curl_exec($ch);
-
-        // Get response code and location header
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $locationHeader = curl_getinfo($ch, CURLINFO_REDIRECT_URL);
-
-        // If it's a redirect, follow it manually
-        if ($httpCode == 307 && !empty($locationHeader)) {
-            curl_setopt($ch, CURLOPT_URL, $locationHeader);
-            $output = curl_exec($ch);
-        }
-
-        // Debugging info
-
-
-        // Check for cURL errors
-        if ($output === false) {
-            echo "cURL Error: " . curl_error($ch) . "\n";
-        }
-
-        // Separate headers and body
-        list($responseHeaders, $responseBody) = explode("\r\n\r\n", $output, 2);
-
-        // Debugging info for headers
-        echo "Response Headers:\n";
-        var_dump($responseHeaders);
-
         curl_close($ch);
+        $data_useer = json_decode($output, true);
+        return $data_useer;
+    }
 
-        $dataUser = json_decode($responseBody, true);
+    function canDelete()
+    {
 
-        // Debugging info for decoded JSON
-        echo "Decoded JSON:\n";
-        var_dump($dataUser);
+        $yesterday = date('Y-m-d H:s:i', strtotime('-1 day'));
+        return $yesterday;
 
-        return $dataUser;
+    }
+
+    function Modifyuser($url_panel,$username,array $data)
+    {
+        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
+
+        $url =  $url_panel.'/api/user/'.$username;
+        $payload = json_encode($data);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        $headers = array();
+        $headers[] = 'Accept: application/json';
+        $headers[] = 'Authorization: Bearer '.$token['access_token'];
+        $headers[] = 'Content-Type: application/json';
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        $result = curl_exec($ch);
+        curl_close($ch);
+        $data_useer = json_decode($result, true);
+        return $data_useer;
+    }
+
+    function Extend ($panel,$username)
+    {
+        $db = new Database();
+        $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id` = ?", [$username, $panel['id']]);
+
+        $originalDate = new DateTime($config['expires_at']);
+        $minutesInOneMonth = (30 * 24 * 60);
+        $modifiedDate = $originalDate->add(new DateInterval("PT{$minutesInOneMonth}M"));
+        $timestamp = $modifiedDate->getTimestamp();
+        $timestampString = date('Y-m-d H:i:s', $timestamp);
+
+        $db->update('configs', $config['id'] , ['expires_at'] , [$timestampString]);
+        $extended = $this->Modifyuser($panel['url'] , $username , ['expire' => $timestamp]);
+        return $extended;
+    }
+
+    function ResetUserDataUsage($username,$url_panel)
+    {
+        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
+        $usernameac = $username;
+        $url =  $url_panel.'/api/user/' . $usernameac.'/reset';
+        $header_value = 'Bearer ';
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST , true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Accept: application/json',
+            'Authorization: ' . $header_value .  $token['access_token']
+        ));
+
+        $output = curl_exec($ch);
+        curl_close($ch);
+        $data_useer = json_decode($output, true);
+        return $data_useer;
+    }
+
+    public function validName($username , $url_panel , $number)
+    {
+        $user = $this->getuser($username, $url_panel);
+        $i = $number;
+        while ($user['detail'] != "User not found")
+        {
+            $list = (explode('_', $username ));
+            $last_part = end($list);
+            $list[count($list) - 1] = $i ;
+            $username = implode('_', $list);
+            if (strpos($last_part,'u') !== false || strpos($last_part,'o') !== false)
+            {
+                $this->sendMessage(291109889 , 'hi');
+                $list[count($list) - 2] = $i ;
+                $username = implode('_', $list);
+            }
+
+            $user = $this->getuser($username, $url_panel);
+            $i++;
+        }
+
+        return $username;
+
     }
 
 

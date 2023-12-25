@@ -2,7 +2,7 @@
 
 
 namespace Database;
-
+date_default_timezone_set('Asia/Tehran');
 use PDO;
 use PDOException;
 
@@ -11,7 +11,7 @@ class Database
     private $connection;
     // $user->email
     // $user['email'];
-    private $option = array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8');
+    private $option = array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4');
 
 
     private $dbHost = 'localhost';
@@ -22,7 +22,8 @@ class Database
     function __construct()
     {
         try {
-            $this->connection = new PDO("mysql:host=" . $this->dbHost . ";dbname=" . $this->dbName, $this->dbUsername, $this->dbPassword, $this->option);
+            $this->connection = new PDO("mysql:host=" . $this->dbHost . ";dbname=" . $this->dbName , $this->dbUsername, $this->dbPassword, $this->option);
+
         } catch (PDOException $e) {
             echo 'error ' . $e->getMessage();
         }
@@ -142,6 +143,7 @@ class Database
     public function insert($tableName, $fields, $values)
     {
         try {
+            $this->connection->query("SET time_zone = '+03:30'");
             $statement = $this->connection->prepare("INSERT INTO " . $tableName . "(" . implode(', ', $fields) . " , created_at) VALUES( :" . implode(', :', $fields) . " , now() );");
             $statement->execute(array_combine($fields, $values));
             // ['email' => 'hassan@yahoo.com', 'age' => 30];
@@ -184,12 +186,12 @@ class Database
 
 
     // delete('categories', 2);
-    public function delete($tableName, $id)
+    public function deleteConfig($tableName, $username , $panel_id)
     {
-        $sql = "DELETE FROM " . $tableName . " WHERE id = ? ;";
+        $sql = "DELETE FROM " . $tableName . " WHERE name = ? AND panel_id = ?;";
         try {
             $statement = $this->connection->prepare($sql);
-            $statement->execute([$id]);
+            $statement->execute([$username , $panel_id ]);
             return true;
         } catch (PDOException $e) {
             echo 'error ' . $e->getMessage();
