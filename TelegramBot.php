@@ -1,6 +1,7 @@
 <?php
 
 namespace app;
+require __DIR__.'/vendor/autoload.php';
 
 use DataBase\Database;
 use DateInterval;
@@ -14,6 +15,10 @@ class TelegramBot
 
 
     private $apiUrl;
+
+    private $panel_username;
+
+    private $panel_password;
     private $botToken;
     public $username;
     public $limitation;
@@ -28,10 +33,12 @@ class TelegramBot
 
 
 
-    public function __construct($botToken)
+    public function __construct($botToken , $panel_username , $panel_password)
     {
         $this->botToken = $botToken;
         $this->apiUrl = "https://api.telegram.org/bot{$this->botToken}/";
+        $this->panel_username = $panel_username;
+        $this->panel_password = $panel_password;
     }
 
     /*    public function handelUpdate($update)
@@ -219,106 +226,106 @@ class TelegramBot
     //     }
     // }
 
-    public function setExpire($chatId, $text, $before = null)
-    {
+    // public function setExpire($chatId, $text, $before = null)
+    // {
 
 
 
-        // Check if the command to set proxy is received
-        if ( $this->command == 'setExpireDate' )
-        {
+    //     // Check if the command to set proxy is received
+    //       if ( $this->command == 'setExpireDate' )
+    //     {
 
 
-            $reply = json_encode([
-                'inline_keyboard' => [
-                    [
-                        ['text' => 'یک ماه', 'callback_data' => 'oneMonth'] ,
-                        ['text' => 'دو ماه', 'callback_data' => 'twoMonth']
-                    ]
-                ]
-            ]);
+    //         $reply = json_encode([
+    //             'inline_keyboard' => [
+    //                 [
+    //                     ['text' => 'یک ماه', 'callback_data' => 'oneMonth'] ,
+    //                     ['text' => 'دو ماه', 'callback_data' => 'twoMonth']
+    //                 ]
+    //             ]
+    //                 ]);
 
-            $this->sendMessage(
-                $chatId,
-                'مدت زمان مورد نظر را انتخاب کنید :',
-                $reply
-            );
-        }
+    //         $this->sendMessage(
+    //             $chatId,
+    //             'مدت زمان مورد نظر را انتخاب کنید :',
+    //             $reply
+    //         );
+    //     }
 
 
 
-        else {
+    //     else {
 
-            // If none of the expected options are received, provide guidance
-            $this->sendMessage(
-                $chatId,
-                'لطفا یک پیام درست انتخاب کنید'
-            );
-        }
-    }
+    //         // If none of the expected options are received, provide guidance
+    //         $this->sendMessage(
+    //             $chatId,
+    //             'لطفا یک پیام درست انتخاب کنید'
+    //         );
+    //     }
+    // }
 
-    private function handlExpireOption($chatId)
-    {
-        $db = new Database();
+    // private function handlExpireOption($chatId)
+    // {
+    //     $db = new Database();
 
-        $content = file_get_contents('php://input');
-        $update = json_decode($content, true);
-        $callbackData = $update['callback_query']['data'];
+    //     $content = file_get_contents('php://input');
+    //     $update = json_decode($content, true);
+    //     $callbackData = $update['callback_query']['data'];
 
-        // Perform actions based on the selected proxy option
-        if ($callbackData === 'oneMonth') {
+    //     // Perform actions based on the selected proxy option
+    //     if ($callbackData === 'oneMonth') {
 
-            $currentDateTime = new DateTime();
-            $currentDateTime->add(new DateInterval('P30D'));
-            $timestamp = $currentDateTime->getTimestamp();
-            $db->update('users', $chatId, ['expire', 'command'], [$timestamp, 'make']);
+    //         $currentDateTime = new DateTime();
+    //         $currentDateTime->add(new DateInterval('P30D'));
+    //         $timestamp = $currentDateTime->getTimestamp();
+    //         $db->update('users', $chatId, ['expire', 'command'], [$timestamp, 'make']);
 
-            $this->sendMessage(
-                $update['callback_query']['message']['chat']['id'],
-                '  زمان تنظیم شد : یک ماه ',
-            );
+    //         $this->sendMessage(
+    //             $update['callback_query']['message']['chat']['id'],
+    //             '  زمان تنظیم شد : یک ماه ',
+    //         );
 
-            $reply = json_encode([
-                'inline_keyboard' => [
-                    [
-                        ['text' => 'بریم', 'callback_data' => 'letsGo']
-                    ]
-                ]
-            ]);
+    //         $reply = json_encode([
+    //             'inline_keyboard' => [
+    //                 [
+    //                     ['text' => 'بریم', 'callback_data' => 'letsGo']
+    //                 ]
+    //             ]
+    //         ]);
 
-            $this->sendMessage(
-                $chatId,
-                'بریم ؟',
-                $reply
-            );
-        }
+    //         $this->sendMessage(
+    //             $chatId,
+    //             'بریم ؟',
+    //             $reply
+    //         );
+    //     }
 
-        if ($callbackData === 'twoMonth') {
-            $currentDateTime = new DateTime();
-            $currentDateTime->add(new DateInterval('P60D'));
-            $timestamp = $currentDateTime->getTimestamp();
-            $db->update('users', $chatId, ['expire', 'command'], [$timestamp, 'make']);
+    //     if ($callbackData === 'twoMonth') {
+    //         $currentDateTime = new DateTime();
+    //         $currentDateTime->add(new DateInterval('P60D'));
+    //         $timestamp = $currentDateTime->getTimestamp();
+    //         $db->update('users', $chatId, ['expire', 'command'], [$timestamp, 'make']);
 
-            $this->sendMessage(
-                $update['callback_query']['message']['chat']['id'],
-                'زمان تنظیم شد : دو ماه'
-            );
+    //         $this->sendMessage(
+    //             $update['callback_query']['message']['chat']['id'],
+    //             'زمان تنظیم شد : دو ماه'
+    //         );
 
-            $reply = json_encode([
-                'inline_keyboard' => [
-                    [
-                        ['text' => 'بریم', 'callback_data' => 'letsGo']
-                    ]
-                ]
-            ]);
+    //         $reply = json_encode([
+    //             'inline_keyboard' => [
+    //                 [
+    //                     ['text' => 'بریم', 'callback_data' => 'letsGo']
+    //                 ]
+    //             ]
+    //         ]);
 
-            $this->sendMessage(
-                $chatId,
-                'بریم ؟',
-                $reply
-            );
-        }
-    }
+    //         $this->sendMessage(
+    //             $chatId,
+    //             'بریم ؟',
+    //             $reply
+    //         );
+    //     }
+    // }
 
 
 
@@ -326,6 +333,8 @@ class TelegramBot
 
     public function makeUser($chatId , $username , $proxies, $expire , $data_limit, $panel_url )
     {
+
+
 
 
         $this->proxies = $proxies;
@@ -348,7 +357,7 @@ class TelegramBot
         echo "<pre>";
         var_dump($data);
 
-        $token = $this->token_panel("kian" , 'kian1381', $panel_url);
+        $token = $this->token_panel($this->panel_username , $this->panel_password , $panel_url);
         var_dump($token);
 
         $payload = json_encode($data);
@@ -380,172 +389,173 @@ class TelegramBot
         return $response;
     }
 
-    public function handleInOrder($chatId , $text, $before = null)
-    {
+    // public function handleInOrder($chatId , $text, $before = null)
+    // {
 
-        $db = new Database();
-        $user = $db->select("SELECT * FROM users WHERE id = ? " , [$chatId] );
-        $this->command = $user['command'];
-        var_dump($this->command);
+    //     $db = new Database();
+    //     $user = $db->select("SELECT * FROM users WHERE id = ? " , [$chatId] );
+    //     $this->command = $user['command'];
+    //     var_dump($this->command);
 
-        if ($this->command == null)
-        {
+    //     if ($this->command == null)
+    //     {
 
-            // Start a conversation
-            $this->sendMessage(
-                $chatId,
-                'خوش آمدید لطفا نام کانفیگ را وارد کنید' ,
-            );
+    //         // Start a conversation
+    //         $this->sendMessage(
+    //             $chatId,
+    //             'خوش آمدید لطفا نام کانفیگ را وارد کنید' ,
+    //         );
 
-            $db->insert('users',['id' , 'command'] , [$chatId , 'set_name'] );
-        }
+    //         $db->insert('users',['id' , 'command'] , [$chatId , 'set_name'] );
+    //     }
 
-        elseif ($this->command == 'set_name') {
+    //     elseif ($this->command == 'set_name') {
 
-            $db->update('users', $chatId ,['name', 'command'], [$text, 'setLimitation' ]);
+    //         $db->update('users', $chatId ,['name', 'command'], [$text, 'setLimitation' ]);
 
-            $this->sendMessage
-            (
-                $chatId,
-                'نام کاربری شما ثبت شد'
-                . 'حجم کانفیگ را وارد نمایید'
-            );
-
-
-        }
-        elseif ($this->command == 'setLimitation' && is_numeric($text)) {
+    //         $this->sendMessage
+    //         (
+    //             $chatId,
+    //             'نام کاربری شما ثبت شد'
+    //             . 'حجم کانفیگ را وارد نمایید'
+    //         );
 
 
-            $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chatId]);
-            $user_id = $user['id'];
-            $db->update('users', $chatId, ['limitation' , 'command'], [$text, 'make' ]);
-            $this->command = 'setExpireDate' ;
-
-            $this->sendMessage(
-                $chatId,
-                'مقدار حجم مورد نظر شما ثبت شد'
-            );
-
-            $this->setExpire($chatId, $text);
-
-        }
-
-        elseif ($this->command = 'make')
-        {
-            var_dump('hi');
-            $this->handlExpireOption($chatId);
-
-        }
-        // elseif (($_SESSION['response'] == 'Vless' || $_SESSION['response'] == 'Vmess') && $_SESSION['command'] = 'setProxy')
-        // {
-
-        //     $this->handleProxyOption($chatId, $_SESSION['response']);
+    //     }
+    //     elseif ($this->command == 'setLimitation' && is_numeric($text)) {
 
 
-        // }
-        // elseif ($_SESSION['response'] == 'بله' && $_SESSION['command'] = 'setProxy') {
-        //     $user = $db->select("SELECT * FROM users WHERE username = ? ", [$_SESSION['username']]);
-        //     $user_id = $user['id'];
+    //         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chatId]);
+    //         $user_id = $user['id'];
+    //         $db->update('users', $chatId, ['limitation' , 'command'], [$text, 'make' ]);
+    //         $this->command = 'setExpireDate' ;
+
+    //         $this->sendMessage(
+    //             $chatId,
+    //             'مقدار حجم مورد نظر شما ثبت شد'
+    //         );
+
+    //         $this->setExpire($chatId, $text);
+
+    //     }
+
+    //     elseif ($this->command = 'make')
+    //     {
+    //         var_dump('hi');
+    //         $this->handlExpireOption($chatId);
+
+    //     }
+    //     // elseif (($_SESSION['response'] == 'Vless' || $_SESSION['response'] == 'Vmess') && $_SESSION['command'] = 'setProxy')
+    //     // {
+
+    //     //     $this->handleProxyOption($chatId, $_SESSION['response']);
 
 
-        //     $existingArray = $db->selectProxiesById($user_id);
-        //     $existingArray['vless']['flow'] = 'xtls-rprx-vision';
-        //     $serializedData = json_encode($existingArray);
-        //     $db->update('users', $user_id, ['proxies'], [$serializedData]);
-
-        //     $keyboard = [
-        //         ['پایان', 'ادامه'],
-        //     ];
-        //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
-        //     $reply = json_encode($response);
-        //     $this->sendMessage(
-        //         $chatId,
-        //         'میخواهید پروکسی دیگه اضافه کنید ؟',
-        //         $reply
-        //     );
-        //     $_SESSION['command'] = 'wannaContinue';
-
-        // }
-        // elseif ($_SESSION['response'] == 'خیر' && $_SESSION['command'] = 'setProxy')
-        // {
-        //     $user = $db->select("SELECT * FROM users WHERE username = ? ", [$_SESSION['username']]);
-        //     $user_id = $user['id'];
+    //     // }
+    //     // elseif ($_SESSION['response'] == 'بله' && $_SESSION['command'] = 'setProxy') {
+    //     //     $user = $db->select("SELECT * FROM users WHERE username = ? ", [$_SESSION['username']]);
+    //     //     $user_id = $user['id'];
 
 
-        //     $existingArray = $db->selectProxiesById($user_id);
-        //     $existingArray['vless'] = array();
-        //     $serializedData = json_encode($existingArray);
-        //     $db->update('users', $user_id, ['proxies'], [$serializedData]);
+    //     //     $existingArray = $db->selectProxiesById($user_id);
+    //     //     $existingArray['vless']['flow'] = 'xtls-rprx-vision';
+    //     //     $serializedData = json_encode($existingArray);
+    //     //     $db->update('users', $user_id, ['proxies'], [$serializedData]);
 
-        //     $keyboard = [
-        //         ['پایان', 'ادامه'],
-        //     ];
-        //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
-        //     $reply = json_encode($response);
-        //     $this->sendMessage(
-        //         $chatId,
-        //         'میخواهید پروکسی دیگه اضافه کنید ؟',
-        //         $reply
-        //     );
-        //     $_SESSION['command'] = 'wannaContinue';
+    //     //     $keyboard = [
+    //     //         ['پایان', 'ادامه'],
+    //     //     ];
+    //     //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
+    //     //     $reply = json_encode($response);
+    //     //     $this->sendMessage(
+    //     //         $chatId,
+    //     //         'میخواهید پروکسی دیگه اضافه کنید ؟',
+    //     //         $reply
+    //     //     );
+    //     //     $_SESSION['command'] = 'wannaContinue';
 
-
-        // }
-
-
-        elseif ($this->command == 'make')
-        {
-
-            $this->sendMessage(
-                $chatId,
-                'میسازمش برات',
-
-            );
+    //     // }
+    //     // elseif ($_SESSION['response'] == 'خیر' && $_SESSION['command'] = 'setProxy')
+    //     // {
+    //     //     $user = $db->select("SELECT * FROM users WHERE username = ? ", [$_SESSION['username']]);
+    //     //     $user_id = $user['id'];
 
 
+    //     //     $existingArray = $db->selectProxiesById($user_id);
+    //     //     $existingArray['vless'] = array();
+    //     //     $serializedData = json_encode($existingArray);
+    //     //     $db->update('users', $user_id, ['proxies'], [$serializedData]);
+
+    //     //     $keyboard = [
+    //     //         ['پایان', 'ادامه'],
+    //     //     ];
+    //     //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
+    //     //     $reply = json_encode($response);
+    //     //     $this->sendMessage(
+    //     //         $chatId,
+    //     //         'میخواهید پروکسی دیگه اضافه کنید ؟',
+    //     //         $reply
+    //     //     );
+    //     //     $_SESSION['command'] = 'wannaContinue';
 
 
-            $db->update('users', $chatId, ['command'], ['fenish' ]);
+    //     // }
 
 
-        }
+    //     elseif ($this->command == 'make')
+    //      {
 
-        // elseif ($_SESSION['response'] == 'ادامه' && $_SESSION['command'] == 'wannaContinue')
-        // {
-        //     echo '<pre>';
-        //     var_dump('hi');
-        //     $_SESSION['command'] = 'setProxy';
-        //     $this->setProxy($chatId, $text);
-        // }
+    //         $this->sendMessage(
+    //             $chatId,
+    //             'میسازمش برات',
 
-        // elseif ($_SESSION['response'] == 'پایان' && $_SESSION['command'] == 'wannaContinue')
-        // {
-        //     $_SESSION['command'] = 'make';
-        //     $keyboard = [
-        //         ['بریم'],
-        //     ];
-        //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
-        //     $reply = json_encode($response);
-        //     $this->sendMessage(
-        //         $chatId,
-        //         'بریم؟',
-        //         $reply
-        //     );
-
-        // }
-
-        else
-        {
-            echo "<pre>";
-            var_dump($_SESSION['response']);
-            var_dump($_SESSION['command']);
-        }
+    //         );
 
 
-    }
+
+
+    //         $db->update('users', $chatId, ['command'], ['fenish' ]);
+
+
+    //     }
+
+    //     // elseif ($_SESSION['response'] == 'ادامه' && $_SESSION['command'] == 'wannaContinue')
+    //     // {
+    //     //     echo '<pre>';
+    //     //     var_dump('hi');
+    //     //     $_SESSION['command'] = 'setProxy';
+    //     //     $this->setProxy($chatId, $text);
+    //     // }
+
+    //     // elseif ($_SESSION['response'] == 'پایان' && $_SESSION['command'] == 'wannaContinue')
+    //     // {
+    //     //     $_SESSION['command'] = 'make';
+    //     //     $keyboard = [
+    //     //         ['بریم'],
+    //     //     ];
+    //     //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
+    //     //     $reply = json_encode($response);
+    //     //     $this->sendMessage(
+    //     //         $chatId,
+    //     //         'بریم؟',
+    //     //         $reply
+    //     //     );
+
+    //     // }
+
+    //     else
+    //     {
+    //         echo "<pre>";
+    //         var_dump($_SESSION['response']);
+    //         var_dump($_SESSION['command']);
+    //     }
+
+
+    // }
 
     function token_panel($username_panel,$password_panel, $panel_url)
     {
+
 
         $url_panel = $panel_url;
         $url_get_token = $panel_url.'/api/admin/token';
@@ -574,10 +584,13 @@ class TelegramBot
 
     function getuser($username,$url_panel)
     {
+
+
+
         $usernameac = $username;
         $url =  $url_panel.'/api/user/' . $usernameac;
         $header_value = 'Bearer ';
-        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
+        $token = $this->token_panel($this->panel_username , $this->panel_password, $url_panel);
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -828,6 +841,13 @@ class TelegramBot
 
     }
 
+    public function searchConfigsBYChatId($chat_id , $panel_id)
+    {
+        $db = new Database();
+        $configs = $db->selectAll("SELECT * FROM `configs` WHERE `user_id` = ? AND `panel_id` = ?  ORDER BY `created_at` DESC LIMIT 30" , [$chat_id , $panel_id]);
+        return $configs;
+    }
+
     public function directSearch($username, $panel_id)
     {
         $db = new Database();
@@ -840,8 +860,10 @@ class TelegramBot
     {
 
 
+
+
         $url = 'http://ts1.kroute.site:8423/api/users';
-        $token = $this->token_panel("kian" , 'kian1381', $urlPanel);
+        $token = $this->token_panel($this->panel_username , $this->panel_password, $urlPanel);
 
 
 
@@ -869,9 +891,12 @@ class TelegramBot
 
     function removeuser($url_panel,$username)
     {
+
+
+
         $url =  $url_panel.'/api/user/'.$username;
         $header_value = 'Bearer ';
-        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
+        $token = $this->token_panel($this->panel_username , $this->panel_password , $url_panel);
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -899,7 +924,9 @@ class TelegramBot
 
     function Modifyuser($url_panel,$username,array $data)
     {
-        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
+
+
+        $token = $this->token_panel($this->panel_username , $this->panel_password, $url_panel);
 
         $url =  $url_panel.'/api/user/'.$username;
         $payload = json_encode($data);
@@ -938,7 +965,9 @@ class TelegramBot
 
     function ResetUserDataUsage($username,$url_panel)
     {
-        $token = $this->token_panel("kian" , 'kian1381', $url_panel);
+
+
+        $token = $this->token_panel($this->panel_username , $this->panel_password , $url_panel);
         $usernameac = $username;
         $url =  $url_panel.'/api/user/' . $usernameac.'/reset';
         $header_value = 'Bearer ';
@@ -960,7 +989,7 @@ class TelegramBot
 
     public function validName($username , $url_panel , $number)
     {
-        $user = $this->getuser($username, $url_panel);
+        $user = $this->getuser($username, $url_panel );
         $i = $number;
         while ($user['detail'] != "User not found")
         {
@@ -991,10 +1020,8 @@ class TelegramBot
 
 }
 
-$botToken = "6809114912:AAEnGhJ_em9lf9I1uofJAXfkiiVd8AgFOyE";
-$bot = new TelegramBot($botToken);
-$update = json_decode(file_get_contents("php://input"), true);
-/*$bot->handelUpdate($update);*/
+
+
 
 
 

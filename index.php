@@ -1,29 +1,43 @@
 <?php
 
+require __DIR__.'/vendor/autoload.php';
+
 date_default_timezone_set('Asia/Tehran');
+
+
 use app\TelegramBot;
 use DataBase\Database;
-use Thread\userThread;
+use Dotenv\Dotenv;
 
-
-
+use function PHPSTORM_META\type;
 require_once 'TelegramBot.php';
 require_once 'Database.php';
 require_once 'userThread.php';
 
 
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../idea');
+$dotenv->load();
 
-$token = '6844787417:AAGPxqzJjxu7PcgS32nYesxv8je-QKSgb_s';
+
+
+$token = $_ENV['BOT_TOKEN'];
+$panel_username = $_ENV['PANEL_USERNAME'];
+$panel_paswword = $_ENV['PANEL_PASSWORD'];
 
 
 
-var_dump($passageWithYourNumber);
+
+
+
+
+
+
 
 $content = file_get_contents('php://input');
 $update = json_decode($content, true);
 
 $db = new Database();
-$bot = new TelegramBot($token);
+$bot = new TelegramBot($token , $panel_username , $panel_paswword);
 $chat_id = $update['message']['chat']['id'];
 $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
 $command = $user['command'];
@@ -208,19 +222,50 @@ if (isset($update['callback_query']))
                 $name = $template['name'];
                 foreach ($name_array as $name_part)
                 {
+
+                    if($name_part[0] == '-' || $name_part[1] == '-')
+                    {
+                        $name_part = str_replace('-', '', $name_part);
+                        $name = str_replace('-','', $name);
+                        $name_array = explode(" ", $name);
+
+                    }
                     if(is_numeric($name_part))
                     {
                         $name = str_replace($name_part, number_format($special_template['price']), $name);
+                        $name_array = explode(" ", $name);
+
                     }
 
                 }
-                $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
+
+
+
             }
 
             else
             {
 
                 $name = $template['name'];
+
+            }
+
+            $canBeMade = true;
+
+
+            foreach ($name_array as $name_part)
+            {
+
+                if(strpos($name_part,'-1') !== false)
+                {
+
+                    $canBeMade = false;
+                }
+            }
+
+
+            if($canBeMade)
+            {
                 $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
             }
 
@@ -239,11 +284,38 @@ if (isset($update['callback_query']))
 
     elseif(explode( " " ,$callbackData)[1] == 'panel_search')
     {
-        $message_id = $bot->sendMessage($chat_id, 'نام کانفیگ مورد نظر خود را وارد کنید' );
         $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
-        $last_message_id = $user['message_id'];
-        $bot->deleteMessage($chat_id,$last_message_id);
-        $db->update('users', $chat_id , ['message' , 'command' , 'message_id'] , ['panel_id ' . explode( " " ,$callbackData)[0] , 'set_name' , $message_id] );
+        $message_id = $user['message_id'];
+        $bot->deleteMessage($chat_id,$message_id);
+
+        $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [explode( " " ,$callbackData)[0]]);
+        $panel_id = $panel['id'];
+
+
+        $configs = $bot->searchConfigsBYChatId($chat_id , $panel_id);
+
+        if (count($configs) > 0)
+        {
+            foreach ($configs as $config)
+            {
+                $buttons[] = [
+                    ['text' => $config['name'], 'callback_data' => strval($config['id'] . ' ' . $panel_id . ' config_search')]
+                ];
+            }
+            $keyboard = [
+                'inline_keyboard' => $buttons
+            ];
+
+            $replyMarkup = json_encode($keyboard);
+
+            $message_id = $bot->sendMessage($chat_id, 'کانفیگ های شما :', $replyMarkup);
+        }
+        else
+        {
+            $bot->sendMessage($chat_id, 'کانفیگی برای نمایش وجود ندارد');
+        }
+        $db->update('users', $chat_id , ['message_id'] , [$message_id] );
+
     }
 
 
@@ -498,6 +570,56 @@ if (isset($update['callback_query']))
         $db->update('users', $chat_id, ['message_id'], [$message_id]);
     }
 
+    elseif(explode( " " ,$callbackData)[2] == 'config_search')
+    {
+        $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
+        $panel_id = explode(" " , $callbackData)[1];
+        $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [$panel_id] );
+        $config = $db->select('SELECT * FROM `configs` WHERE `id` = ?' , [explode(" " , $callbackData)[0]]);
+        $marzban_config = $bot->getuser($config['name'], $panel['url'])['subscription_url'];
+
+        $message_id = $user['message_id'];
+        $bot->deleteMessage($chat_id,$message_id);
+
+        if ($config != null) {
+            $buttons = [
+                [
+                    ['text' => 'تمدید', 'callback_data' => 'update ' . $config['name'] . ' ' . $config['panel_id']],
+                    ['text' => 'بازگشت', 'callback_data' => 'return '],
+                ]
+            ];
+
+
+            $can_delete = strtotime($config['created_at']) > strtotime('-1 day');
+
+            if ($can_delete)
+            {
+
+                $buttons[] = [['text' => 'حذف', 'callback_data' => 'delete ' . $config['name'] . ' ' . $config['panel_id']]];
+
+            }
+
+            $keyboard = [
+                'inline_keyboard' => $buttons
+            ];
+
+            $replyMarkup = json_encode($keyboard);
+            if ($marzban_config == null)
+            {
+                $message_id = $bot->sendMessage($chat_id, 'لطفا دوباره تلاش کنید ');
+                $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
+            }
+            else
+            {
+                $url = $panel['url'] . $marzban_config;
+                $QRCode = $bot->makeQRcode($url);
+                $message_id = $bot->sendImage($chat_id, $QRCode, $url, $config['name'] , $replyMarkup);
+                $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
+            }
+
+        }
+    }
+
     else
     {
 
@@ -511,7 +633,8 @@ if($user["is_verified"] == "approved")
 {
     if (isset($update['message']) && $update['message']['text'] == '/start' )
     {
-        $bot->sendMessage($chat_id,'سلام');
+        $bot->sendMessage($chat_id,' سلام خوش آمدید');
+        $db->update('users', $chat_id, ['message' , 'command'], [null , null]);
     }
 
     elseif (isset($update['message']) && $update['message']['text'] == '🌍 کانفیگ های پیشنهادی' )
@@ -525,7 +648,7 @@ if($user["is_verified"] == "approved")
 
 
 
-        $begin_message_id = $bot->sendMessage($chat_id, 'خوش آمدید');
+
 
 
 
@@ -542,35 +665,214 @@ if($user["is_verified"] == "approved")
             $db = new Database();
             $panels = $db->selectAll("SELECT * FROM panel_users WHERE user_id = ? ", [$chat_id]);
 
-            foreach ($panels as $panel)
+            if(count($panels) == 1)
             {
-                $selected_panels = $db->join('*' , 'panel_users' , 'panels' , 'panel_users.panel_id = panels.id' , 'panel_users.panel_id = ' . $panel['panel_id'] );
-                $buttons[] = [['text' => $selected_panels['name'], 'callback_data' => strval($panel['panel_id'] . ' panel ' . $message_id)]];
+                $db = new Database();
+                $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+                $message_id = $user['message_id'];
+                $bot->deleteMessage($chat_id,$message_id);
+                $panel = $db->join('*' , 'panel_users' , 'panels' , 'panel_users.panel_id = panels.id' , 'panel_users.panel_id = ' . $panels[0]['panel_id']);
+
+
+                $templates = $db->selectAll("SELECT * FROM templates WHERE panel_id = ? ", [$panel['id']]);
+                foreach ($templates as $template)
+                {
+                    $name_array = explode(" ", $template["name"]);
+                    $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
+                    if($special_template)
+                    {
+
+                        $name = $template['name'];
+                        foreach ($name_array as $name_part)
+                        {
+
+                            if($name_part[0] == '-' || $name_part[1] == '-')
+                            {
+                                $name_part = str_replace('-', '', $name_part);
+                                $name = str_replace('-','', $name);
+                                $name_array = explode(" ", $name);
+
+                            }
+                            if(is_numeric($name_part))
+                            {
+                                $name = str_replace($name_part, number_format($special_template['price']), $name);
+                                $name_array = explode(" ", $name);
+
+                            }
+
+                        }
+
+
+
+                    }
+
+                    else
+                    {
+
+                        $name = $template['name'];
+
+                    }
+
+                    $canBeMade = true;
+
+
+                    foreach ($name_array as $name_part)
+                    {
+
+                        if(strpos($name_part,'-1') !== false)
+                        {
+
+                            $canBeMade = false;
+                        }
+                    }
+
+
+                    if($canBeMade)
+                    {
+                        $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
+                    }
+
+
+                }
+
+                $replyMarkup = json_encode([
+                    'inline_keyboard' =>
+                        $buttons
+
+                ]);
+
+                $message_id = $bot->sendMessage($chat_id, 'کانفیگ های این پنل:', $replyMarkup);
+                $db->update('users', $chat_id, ['message_id'], [$message_id]);
             }
 
-
-            if($panels == NULL)
+            elseif($panels == NULL)
             {
 
                 $panels = $bot->findDefaultPanels();
-                $buttons = [];
-
-
-                foreach ($panels as $panel)
+                if(count($panels) == 1)
                 {
-                    $buttons[] = [['text' => $panel['name'], 'callback_data' => strval($panel['id'] . ' panel ' . $message_id)]];
+                    $db = new Database();
+                    $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+                    $message_id = $user['message_id'];
+                    $bot->deleteMessage($chat_id,$message_id);
+
+
+
+                    $templates = $db->selectAll("SELECT * FROM templates WHERE panel_id = ? ", [$panels[0]['id']]);
+                    foreach ($templates as $template)
+                    {
+                        $name_array = explode(" ", $template["name"]);
+                        $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
+                        if($special_template)
+                        {
+
+                            $name = $template['name'];
+                            foreach ($name_array as $name_part)
+                            {
+
+                                if($name_part[0] == '-' || $name_part[1] == '-')
+                                {
+                                    $name_part = str_replace('-', '', $name_part);
+                                    $name = str_replace('-','', $name);
+                                    $name_array = explode(" ", $name);
+
+                                }
+                                if(is_numeric($name_part))
+                                {
+                                    $name = str_replace($name_part, number_format($special_template['price']), $name);
+                                    $name_array = explode(" ", $name);
+
+                                }
+
+                            }
+
+
+
+                        }
+
+                        else
+                        {
+
+                            $name = $template['name'];
+
+                        }
+
+                        $canBeMade = true;
+
+
+                        foreach ($name_array as $name_part)
+                        {
+
+                            if(strpos($name_part,'-1') !== false)
+                            {
+
+                                $canBeMade = false;
+                            }
+                        }
+
+
+                        if($canBeMade)
+                        {
+                            $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
+                        }
+
+
+                    }
+
+                    $replyMarkup = json_encode([
+                        'inline_keyboard' =>
+                            $buttons
+
+                    ]);
+
+                    $message_id = $bot->sendMessage($chat_id, 'کانفیگ های این پنل:', $replyMarkup);
+                    $db->update('users', $chat_id, ['message_id'], [$message_id]);
                 }
+
+                else
+                {
+                    $buttons = [];
+
+
+                    foreach ($panels as $panel)
+                    {
+                        $buttons[] = [['text' => $panel['name'], 'callback_data' => strval($panel['id'] . ' panel ' . $message_id)]];
+                    }
+
+                    $replyMarkup = json_encode([
+                        'inline_keyboard' =>
+                            $buttons
+
+                    ]);
+
+                    $message_id = $bot->sendMessage($chat_id, 'پنل های پیشنهادی شما:', $replyMarkup);
+                    $db->update('users', $chat_id, ['message_id'], [$message_id]);
+                }
+
             }
 
-            // Assuming here that you want to send a welcome message along with a button
-            $replyMarkup = json_encode([
-                'inline_keyboard' =>
-                    $buttons
+            else
+            {
+                foreach ($panels as $panel)
+                {
+                    $selected_panels = $db->join('*' , 'panel_users' , 'panels' , 'panel_users.panel_id = panels.id' , 'panel_users.panel_id = ' . $panel['panel_id'] );
+                    $buttons[] = [['text' => $selected_panels['name'], 'callback_data' => strval($panel['panel_id'] . ' panel ' . $message_id)]];
+                }
 
-            ]);
 
-            $message_id = $bot->sendMessage($chat_id, 'پنل های پیشنهادی شما:', $replyMarkup);
-            $db->update('users', $chat_id, ['message_id'], [$message_id]);
+
+                // Assuming here that you want to send a welcome message along with a button
+                $replyMarkup = json_encode([
+                    'inline_keyboard' =>
+                        $buttons
+
+                ]);
+
+                $message_id = $bot->sendMessage($chat_id, 'پنل های پیشنهادی شما:', $replyMarkup);
+                $db->update('users', $chat_id, ['message_id'], [$message_id]);
+            }
+
+
         }
 
     }
@@ -705,14 +1007,14 @@ if($user["is_verified"] == "approved")
 
 
 
-        elseif(explode( " " ,$callbackData)[1] == 'panel_search')
-        {
-            $message_id = $bot->sendMessage($chat_id, 'نام کانفیگ مورد نظر خود را وارد کنید' );
-            $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
-            $last_message_id = $user['message_id'];
-            $bot->deleteMessage($chat_id,$last_message_id);
-            $db->update('users', $chat_id , ['message' , 'command' , 'message_id'] , ['panel_id ' . explode( " " ,$callbackData)[0] , 'set_name' , $message_id] );
-        }
+        // elseif(explode( " " ,$callbackData)[1] == 'panel_search')
+        // {
+
+        //    $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
+        //    $last_message_id = $user['message_id'];
+        //    $bot->deleteMessage($chat_id,$last_message_id);
+        //    $db->update('users', $chat_id , ['message' , 'command' , 'message_id'] , ['panel_id ' . explode( " " ,$callbackData)[0] , 'set_name' , $message_id] );
+        // }
 
 
 
@@ -1012,6 +1314,7 @@ if($user["is_verified"] == "approved")
 
         else
         {
+
             $panel = $db->select("SELECT * FROM `panel_users` WHERE `user_id` = ?", [$chat_id]);
             $panel_id = $panel['panel_id'];
             if (!$panel)
@@ -1020,8 +1323,30 @@ if($user["is_verified"] == "approved")
                 $panel = $panels[0];
                 $panel_id = $panel["id"];
             }
-            $message_id = $bot->sendMessage($chat_id, 'نام کانفیگ مورد نظر خود را وارد کنید' );
-            $db->update('users', $chat_id , ['message' , 'command' , 'message_id'] , ['panel_id ' . $panel_id , 'set_name' , $message_id] );
+
+            $configs = $bot->searchConfigsBYChatId($chat_id , $panel_id);
+
+            if (count($configs) > 0)
+            {
+                foreach ($configs as $config)
+                {
+                    $buttons[] = [
+                        ['text' => $config['name'], 'callback_data' => strval($config['id'] . ' ' . $panel_id . ' config_search')]
+                    ];
+                }
+                $keyboard = [
+                    'inline_keyboard' => $buttons
+                ];
+
+                $replyMarkup = json_encode($keyboard);
+
+                $message_id = $bot->sendMessage($chat_id, 'کانفیگ های شما :', $replyMarkup);
+            }
+            else
+            {
+                $bot->sendMessage($chat_id, 'کانفیگی برای نمایش وجود ندارد');
+            }
+            $db->update('users', $chat_id , ['message_id'] , [$message_id] );
         }
 
 
@@ -1070,66 +1395,66 @@ if($user["is_verified"] == "approved")
 
 
 
-    elseif ($command == 'set_name')
-    {
+    // elseif ($command == 'set_name')
+    // {
 
-        $search = $update['message']['text'] ;
-        $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
-        $panel_id = explode(" " , $user['message'])[1];
-        $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [$panel_id] );
-        $config = $bot->directSearch($search , intval($panel_id));
-        $marzban_config = $bot->getuser($config['name'], $panel['url'])['subscription_url'];
+    //     $search = $update['message']['text'] ;
+    //     $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
+    //     $panel_id = explode(" " , $user['message'])[1];
+    //     $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [$panel_id] );
+    //     $config = $bot->directSearch($search , intval($panel_id));
+    //     $marzban_config = $bot->getuser($config['name'], $panel['url'])['subscription_url'];
 
-        $message_id = $user['message_id'];
-        $bot->deleteMessage($chat_id,$message_id);
+    //     $message_id = $user['message_id'];
+    //     $bot->deleteMessage($chat_id,$message_id);
 
-        if ($config != null) {
-            $buttons = [
-                [
-                    ['text' => 'تمدید', 'callback_data' => 'update ' . $config['name'] . ' ' . $config['panel_id']],
-                    ['text' => 'بازگشت', 'callback_data' => 'return '],
-                ]
-            ];
-
-
-            $can_delete = strtotime($config['created_at']) > strtotime('-1 day');
-
-            if ($can_delete) {
-
-                $buttons[] = [['text' => 'حذف', 'callback_data' => 'delete ' . $config['name'] . ' ' . $config['panel_id']]];
-
-            }
-
-            $keyboard = [
-                'inline_keyboard' => $buttons
-            ];
-
-            $replyMarkup = json_encode($keyboard);
-            if ($marzban_config == null)
-            {
-                $message_id = $bot->sendMessage($chat_id, 'لطفا دوباره تلاش کنید ');
-                $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
-            }
-            else
-            {
-                $url = $panel['url'] . $marzban_config;
-                $QRCode = $bot->makeQRcode($url);
-                $message_id = $bot->sendImage($chat_id, $QRCode, $url, $config['name'] , $replyMarkup);
-                $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
-            }
-
-        }
+    //     if ($config != null) {
+    //         $buttons = [
+    //             [
+    //                 ['text' => 'تمدید', 'callback_data' => 'update ' . $config['name'] . ' ' . $config['panel_id']],
+    //                 ['text' => 'بازگشت', 'callback_data' => 'return '],
+    //             ]
+    //         ];
 
 
+    //         $can_delete = strtotime($config['created_at']) > strtotime('-1 day');
 
-        else
-        {
-            $message_id = $bot->sendMessage($chat_id, 'کانفیگی برای شما با این نام موجود نیست');
-            $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
-        }
+    //         if ($can_delete) {
+
+    //             $buttons[] = [['text' => 'حذف', 'callback_data' => 'delete ' . $config['name'] . ' ' . $config['panel_id']]];
+
+    //         }
+
+    //         $keyboard = [
+    //             'inline_keyboard' => $buttons
+    //         ];
+
+    //         $replyMarkup = json_encode($keyboard);
+    //         if ($marzban_config == null)
+    //         {
+    //             $message_id = $bot->sendMessage($chat_id, 'لطفا دوباره تلاش کنید ');
+    //             $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
+    //         }
+    //         else
+    //         {
+    //             $url = $panel['url'] . $marzban_config;
+    //             $QRCode = $bot->makeQRcode($url);
+    //             $message_id = $bot->sendImage($chat_id, $QRCode, $url, $config['name'] , $replyMarkup);
+    //             $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
+    //         }
+
+    //     }
 
 
-    }
+
+    //     else
+    //     {
+    //         $message_id = $bot->sendMessage($chat_id, 'کانفیگی برای شما با این نام موجود نیست');
+    //         $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
+    //     }
+
+
+    // }
 
     elseif (isset($update['message']) && $command == 'alter_name')
     {
