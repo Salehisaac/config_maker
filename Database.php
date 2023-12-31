@@ -219,6 +219,19 @@ class Database
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function deleteMessage($tableName, $username)
+    {
+        $sql = "DELETE FROM " . $tableName . " WHERE id = ?;";
+        try {
+            $statement = $this->connection->prepare($sql);
+            $statement->execute([$username]);
+            return true;
+        } catch (PDOException $e) {
+            echo 'error ' . $e->getMessage();
+            return false;
+        }
+    }
+
 
 
 

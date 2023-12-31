@@ -33,6 +33,8 @@ $panel_paswword = $_ENV['PANEL_PASSWORD'];
 
 
 
+
+
 $content = file_get_contents('php://input');
 $update = json_decode($content, true);
 
@@ -45,6 +47,11 @@ $message_id = $user['message_id'];
 $bot->deleteMessage($chat_id,$message_id);
 
 $user = $bot->findUser($chat_id);
+
+
+
+
+
 
 
 if($user == null)
@@ -409,10 +416,13 @@ if (isset($update['callback_query']))
 
         $username = $bot->validName($username , $panel['url'] , $number);
 
+
+
         $proxies = json_decode($selected['proxy'] , true);
         $nameprotocol = array();
         $nameprotocol['vless'] = $proxies['vless'];
         $proxies = $nameprotocol;
+
 
 
         $currentDate = new DateTime();
@@ -452,15 +462,29 @@ if (isset($update['callback_query']))
 
         $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
 
+
         $config = $bot->getuser($username, $panel['url'])['subscription_url'];
 
         if($config == null)
         {
-            $config = $bot->getuser($username, $panel['url'])['subscription_url'];
+            for ($i= 0 ; $i<3 ; $i++)
+            {
+                $config = $bot->getuser($username, $panel['url'])['subscription_url'];
+                if($config !== null)
+                {
+                    break;
+                }
+                sleep(7);
+            }
         }
-        if(strpos($config , '://') == false)
+        if(strpos($config , '://') == false && $config !== null)
         {
             $config = $panel['url'] . $config;
+        }
+
+        elseif($config == null)
+        {
+            $config = false ;
         }
 
 
@@ -620,6 +644,12 @@ if (isset($update['callback_query']))
         }
     }
 
+    elseif(explode( " " ,$callbackData)[0] == 'answer')
+    {
+        $db->update('users' , $chat_id , ['command' , 'message'] , ['answer' , explode( " " ,$callbackData)[1] . ' ' . explode( " " ,$callbackData)[2] ]);
+        $bot->sendMessage($chat_id , 'پاسخ خود را به این مشتری بنویسید');
+    }
+
     else
     {
 
@@ -643,8 +673,6 @@ if($user["is_verified"] == "approved")
         $text = $update['message']['text'];
         $chat_id = $update['message']['chat']['id'];
         $messageId = $update['message']['message_id'];
-
-
 
 
 
@@ -1018,17 +1046,17 @@ if($user["is_verified"] == "approved")
 
 
 
-        elseif(explode( " " ,$callbackData)[0] == 'خرید')
-        {
+        // elseif(explode( " " ,$callbackData)[0] == 'خرید')
+        // {
 
 
 
 
-            $db = new Database();
+        //     $db = new Database();
 
-            $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
-            $message_id = $user['message_id'];
-            $bot->deleteMessage($chat_id,$message_id);
+        //     $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+        //     $message_id = $user['message_id'];
+        //     $bot->deleteMessage($chat_id,$message_id);
 
 
 
@@ -1036,158 +1064,149 @@ if($user["is_verified"] == "approved")
 
 
 
-            $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[1]);
-            $price = $selected['price'];
-            $price_show = $price;
+        //     $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[1]);
+        //     $price = $selected['price'];
+        //     $price_show = $price;
 
-            if($selected == null)
-            {
+        //     if($selected == null)
+        //     {
 
-                $selected = $db->select("SELECT * FROM templates WHERE `id` = ? " , [explode( " " ,$callbackData)[1]]);
-                $price = $selected['default_price'];
-                $price_show = $price;
+        //         $selected = $db->select("SELECT * FROM templates WHERE `id` = ? " , [explode( " " ,$callbackData)[1]]);
+        //         $price = $selected['default_price'];
+        //         $price_show = $price;
 
-            }
+        //     }
 
 
 
 
 
-            $panel = $db->join('*' , 'templates' , 'panels' , 'templates.panel_id = panels.id' , 'templates.panel_id = ' . $selected['panel_id'] );
+        //     $panel = $db->join('*' , 'templates' , 'panels' , 'templates.panel_id = panels.id' , 'templates.panel_id = ' . $selected['panel_id'] );
 
-            $username = $update['callback_query']['message']['chat']['username'];
+        //     $username = $update['callback_query']['message']['chat']['username'];
 
-            if($user['alter_name'] == 1 && explode(' ' ,$user['message'])[0] == 'alter_name')
-            {
-                $special_template = $db->select('SELECT * FROM `user_templates` WHERE `user_id` = ? AND `template_id` = ?',[$chat_id , explode( " " ,$callbackData)[1]] );
+        //     if($user['alter_name'] == 1 && explode(' ' ,$user['message'])[0] == 'alter_name')
+        //     {
+        //         $special_template = $db->select('SELECT * FROM `user_templates` WHERE `user_id` = ? AND `template_id` = ?',[$chat_id , explode( " " ,$callbackData)[1]] );
 
-                if($special_template)
-                {
-                    $username = explode(' ' ,$user['message'])[1] . '_' . $special_template['name'];
-                }
-                else
-                {
-                    $username = explode(' ' ,$user['message'])[1];
-                }
+        //         if($special_template)
+        //         {
+        //             $username = explode(' ' ,$user['message'])[1] . '_' . $special_template['name'];
+        //         }
+        //         else
+        //         {
+        //             $username = explode(' ' ,$user['message'])[1];
+        //         }
 
-            }
+        //     }
 
 
 
-            $configs = $bot->search($username);
-            if(count($configs) > 0)
-            {
+        //     $configs = $bot->search($username);
+        //     if(count($configs) > 0)
+        //     {
 
-                $last_configs_name = explode('_', $configs[sizeof($configs) -1]['name']);
-                $last_part_of_name = end($last_configs_name);
-                $last_part_of_name = intval($last_part_of_name);
+        //         $last_configs_name = explode('_', $configs[sizeof($configs) -1]['name']);
+        //         $last_part_of_name = end($last_configs_name);
+        //         $last_part_of_name = intval($last_part_of_name);
 
-                if (!is_int($last_part_of_name))
-                {
-                    unset($last_configs_name[count($last_configs_name) - 1]);
-                }
-                $last_number = end($last_configs_name);
-            }
+        //         if (!is_int($last_part_of_name))
+        //         {
+        //             unset($last_configs_name[count($last_configs_name) - 1]);
+        //         }
+        //         $last_number = end($last_configs_name);
+        //     }
 
-            else
-            {
-                $last_number = 0;
-            }
+        //     else
+        //     {
+        //         $last_number = 0;
+        //     }
 
 
 
 
-            $number = $last_number +1;
+        //     $number = $last_number +1;
 
-            $username = $username .'_'. $number;
+        //     $username = $username .'_'. $number;
 
 
 
 
 
-            $username = $bot->validName($username , $panel['url'] , $number);
+        //     $username = $bot->validName($username , $panel['url'] , $number);
 
-            $proxies = json_decode($selected['proxy'] , true);
-            $nameprotocol = array();
-            $nameprotocol['vless'] = $proxies['vless'];
-            $proxies = $nameprotocol;
+        //     $proxies = json_decode($selected['proxy'] , true);
+        //     $nameprotocol = array();
+        //     $nameprotocol['vless'] = $proxies['vless'];
+        //     $proxies = $nameprotocol;
 
 
-            $currentDate = new DateTime();
-            $futureDateTime = clone $currentDate;
+        //     $currentDate = new DateTime();
+        //     $futureDateTime = clone $currentDate;
 
 
-            if($selected['expire'] !== null)
-            {
-                $hours =($selected['expire'] * 24) + 2 ;
-                $futureDateTime->modify('+' . $hours . 'hours');
-                $futureTimestamp = $futureDateTime->getTimestamp();
-                $timestampString = date('Y-m-d H:i:s', $futureTimestamp);
-                $expire = $futureTimestamp;
-            }
-            else
-            {
-                $expire = null ;
-                $timestampString = null ;
-            }
-
-
-
-            if($selected['limitation'] !== null)
-            {
-                $data_limit = intval($selected['limitation'] * (1024 ** 3));
-                $data_show = $selected['limitation'];
-            }
-
-            else
-            {
-                $data_limit = null ;
-            }
-
-
-
-
-
-            $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
-
-            $config = $bot->getuser($username, $panel['url'])['subscription_url'];
-
-            if($config == null)
-            {
-                $config = $bot->getuser($username, $panel['url'])['subscription_url'];
-            }
-            if(strpos($config , '://') == false)
-            {
-                $config = $panel['url'] . $config;
-            }
-
-
-            if($config)
-            {
-                $result =$db->insert('configs', ['name', 'expire', 'limitation','proxy', 'user_id', 'price' , 'panel_id' , 'expires_at'],[$username, $selected['expire'], $data_limit, $selected['proxy'], $chat_id, $price , $panel['id'], $timestampString  ]);
-                $QRCode = $bot->makeQRcode($config);
-                $bot->sendImage($chat_id, $QRCode, $config, $username );
-
-                $user = $db->selectAll("SELECT * FROM users WHERE `id` = ? " , [$chat_id]);
-                $indebtedness = $user[0]['indebtedness'];
-                $indebtedness += $price;
-                $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
-            }
-
-            else
-            {
-                $bot->sendMessage($chat_id, "مشکلی پیش آمده لطفا دوباره امتحان کنید و در صورت عدم رفع مشکل با ادمین تماس حاصل فرمایید");
-            }
-
-
-
-
-
-
-
-
-
-        }
+        //     if($selected['expire'] !== null)
+        //     {
+        //         $hours =($selected['expire'] * 24) + 2 ;
+        //         $futureDateTime->modify('+' . $hours . 'hours');
+        //         $futureTimestamp = $futureDateTime->getTimestamp();
+        //         $timestampString = date('Y-m-d H:i:s', $futureTimestamp);
+        //         $expire = $futureTimestamp;
+        //     }
+        //     else
+        //     {
+        //         $expire = null ;
+        //         $timestampString = null ;
+        //     }
+
+
+
+        //     if($selected['limitation'] !== null)
+        //     {
+        //         $data_limit = intval($selected['limitation'] * (1024 ** 3));
+        //         $data_show = $selected['limitation'];
+        //     }
+
+        //     else
+        //     {
+        //         $data_limit = null ;
+        //     }
+
+
+
+
+
+        //         $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
+
+        //         $config = $bot->getuser($username, $panel['url'])['subscription_url'];
+
+        //         if($config == null)
+        //         {
+        //             $config = $bot->getuser($username, $panel['url'])['subscription_url'];
+        //         }
+        //         if(strpos($config , '://') == false)
+        //             {
+        //                 $config = $panel['url'] . $config;
+        //             }
+
+
+        //         if($config)
+        //         {
+        //             $result =$db->insert('configs', ['name', 'expire', 'limitation','proxy', 'user_id', 'price' , 'panel_id' , 'expires_at'],[$username, $selected['expire'], $data_limit, $selected['proxy'], $chat_id, $price , $panel['id'], $timestampString  ]);
+        //             $QRCode = $bot->makeQRcode($config);
+        //             $bot->sendImage($chat_id, $QRCode, $config, $username );
+
+        //             $user = $db->selectAll("SELECT * FROM users WHERE `id` = ? " , [$chat_id]);
+        //             $indebtedness = $user[0]['indebtedness'];
+        //             $indebtedness += $price;
+        //             $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
+        //         }
+        //         else
+        //         {
+        //             $bot->sendMessage($chat_id, "مشکلی پیش آمده لطفا دوباره امتحان کنید و در صورت عدم رفع مشکل با ادمین تماس حاصل فرمایید");
+        //         }
+
+        // }
 
         elseif(explode( " " ,$callbackData)[0] == 'delete')
         {
@@ -1278,15 +1297,23 @@ if($user["is_verified"] == "approved")
 
     elseif (isset($update['message']) && $update['message']['text'] == 'میزان بدهی شما')
     {
-
+        $db->update('users' , $chat_id , ['command'] , [null]);
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         $indebtedness = $user['indebtedness'];
-        $bot->sendMessage($chat_id,'میزان بدهی شما :'. $indebtedness/1000 . 'هزار تومان' );
+        $bot->sendMessage($chat_id,'میزان بدهی شما : '. $indebtedness . ' هزار تومان ' );
 
     }
+    //this fs for support panel
+    elseif (isset($update['message']) && $update['message']['text'] == 'تماس با پشتیبانی')
+    {
 
+        $bot->sendMessage($chat_id,' لطفا پیغام خود را بفرستید' ,$reply);
+        $db->update('users' , $chat_id , ['command'] , ['support']);
+
+    }
     elseif (isset($update['message']) && $update['message']['text'] == '🧔 کانفیگ های شما')
     {
+        $db->update('users' , $chat_id , ['command'] , [null]);
         $panels = $db->selectAll("SELECT * FROM `panel_users` WHERE `user_id` = ?", [$chat_id]);
         $panels_number = count($panels);
 
@@ -1353,13 +1380,17 @@ if($user["is_verified"] == "approved")
 
 
     }
+    //this is for back keyborad button
+
 
     elseif (isset($update['message']) && $update['message']['text'] == 'پنل مدیریت')
     {
 
+        $db->update('users' , $chat_id , ['command'] , [null]);
         $keyboard = [
             ['🌍 درخواست ها'],
-            ['🌍 بازگشت به منوی اصلی '],
+            ['🌍 بازگشت به منوی اصلی'],
+            ['🌍 پیام های مشتریان'],
         ];
         $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
         $reply = json_encode($response);
@@ -1369,6 +1400,7 @@ if($user["is_verified"] == "approved")
 
     elseif (isset($update['message']) && $update['message']['text'] == '🌍 درخواست ها')
     {
+        $db->update('users' , $chat_id , ['command'] , [null]);
         $requests = $db->selectAll("SELECT * FROM `users` WHERE `is_verified` = ?", ['unchecked']);
         foreach ($requests as $request)
         {
@@ -1393,68 +1425,54 @@ if($user["is_verified"] == "approved")
 
     }
 
+    elseif (isset($update['message']) && $update['message']['text'] == '🌍 بازگشت به منوی اصلی')
+    {
+        $bot->sendMessage($chat_id , 'به منوی قبلی بازگشتید');
+        $db->update('users' , $chat_id , ['command'] , [null]);
+    }
 
+    elseif (isset($update['message']) && $update['message']['text'] == '🌍 پیام های مشتریان')
+    {
+        $messages = $db->selectAll('SELECT * FROM `support`');
 
-    // elseif ($command == 'set_name')
-    // {
+        if(count($messages) == 0)
+        {
+            $bot->sendMessage($chat_id , 'پیامی برای نمایش وجود ندارد' );
+        }
+        else
+        {
 
-    //     $search = $update['message']['text'] ;
-    //     $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
-    //     $panel_id = explode(" " , $user['message'])[1];
-    //     $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [$panel_id] );
-    //     $config = $bot->directSearch($search , intval($panel_id));
-    //     $marzban_config = $bot->getuser($config['name'], $panel['url'])['subscription_url'];
+            foreach($messages as $message)
+            {
 
-    //     $message_id = $user['message_id'];
-    //     $bot->deleteMessage($chat_id,$message_id);
-
-    //     if ($config != null) {
-    //         $buttons = [
-    //             [
-    //                 ['text' => 'تمدید', 'callback_data' => 'update ' . $config['name'] . ' ' . $config['panel_id']],
-    //                 ['text' => 'بازگشت', 'callback_data' => 'return '],
-    //             ]
-    //         ];
-
-
-    //         $can_delete = strtotime($config['created_at']) > strtotime('-1 day');
-
-    //         if ($can_delete) {
-
-    //             $buttons[] = [['text' => 'حذف', 'callback_data' => 'delete ' . $config['name'] . ' ' . $config['panel_id']]];
-
-    //         }
-
-    //         $keyboard = [
-    //             'inline_keyboard' => $buttons
-    //         ];
-
-    //         $replyMarkup = json_encode($keyboard);
-    //         if ($marzban_config == null)
-    //         {
-    //             $message_id = $bot->sendMessage($chat_id, 'لطفا دوباره تلاش کنید ');
-    //             $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
-    //         }
-    //         else
-    //         {
-    //             $url = $panel['url'] . $marzban_config;
-    //             $QRCode = $bot->makeQRcode($url);
-    //             $message_id = $bot->sendImage($chat_id, $QRCode, $url, $config['name'] , $replyMarkup);
-    //             $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
-    //         }
-
-    //     }
+                $buttons[] = [['text' => 'پاسخ', 'callback_data' => 'answer ' . $message['chat_id'] . ' ' . $message['id']]];
 
 
 
-    //     else
-    //     {
-    //         $message_id = $bot->sendMessage($chat_id, 'کانفیگی برای شما با این نام موجود نیست');
-    //         $db->update('users', $chat_id, ['message_id', 'command'], [$message_id , '']);
-    //     }
+
+                $replyMarkup = json_encode([
+                    'inline_keyboard' =>
+                        $buttons
+
+                ]);
 
 
-    // }
+
+                $sent_message = $message['message'] ;
+                $text = "شما یک پیغام جدید از طرف {$message['name']} دارید
+                    {$sent_message}";
+
+                $bot->sendMessage($chat_id , $text , $replyMarkup );
+                $buttons = [];
+            }
+        }
+
+    }
+
+
+
+
+
 
     elseif (isset($update['message']) && $command == 'alter_name')
     {
@@ -1498,6 +1516,42 @@ if($user["is_verified"] == "approved")
         $bot->deleteMessage($chat_id,$message_id);
         $message_id = $bot->sendMessage($chat_id, 'پنل های پیشنهادی شما:', $replyMarkup);
         $db->update('users', $chat_id, ['message_id'], [$message_id]);
+        $db->update('users' , $chat_id , ['command'] , [null]);
+    }
+
+    elseif (isset($update['message']) && $command == 'support')
+    {
+
+        $bot->sendMessage($chat_id , 'پیغام شما با موفقیت ارسال شد به زودی پاسخ خود را از طریق همین ربات دریافت خواهید کرد');
+        $db->insert('support' , ['chat_id' , 'message' , 'name'] , [$chat_id , $update['message']['text'] ,$user['name'] ]);
+        $db->update('users' , $chat_id , ['command'] , [null]);
+
+    }
+
+    elseif (isset($update['message']) && $command == 'answer')
+    {
+
+        $target_user_id = $user['message'];
+        $message = $db->select('SELECT * FROM `support` WHERE `id` = ?' , [explode( " " ,$target_user_id)[1]]);
+
+        $text = "ادمین در جواب این پیام شما پاسخی ارسال کرد 
+
+        ----------------------------------------------------------------
+        
+        {$message['message']}
+
+        -----------------------------------------------------------------
+
+        {$update['message']['text']}
+        
+        
+        ";
+
+
+        $bot->sendMessage(explode( " " ,$target_user_id)[0] , $text );
+        $db->deleteMessage('support' ,explode( " " ,$target_user_id)[1] );
+
+
     }
 
 
@@ -1510,7 +1564,7 @@ elseif($user['is_verified'] == 'unchecked')
 {
 
 
-    $buttons[] = [['text' => 'تماس با پشتیبانی', 'url' => 'https://t.me/amir_rgbU' ]];
+    $buttons[] = [['text' => 'تماس با پشتیبانی', 'url' => 'https://t.me/RajaTeam_support' ]];
 
     $replyMarkup = json_encode([
         'inline_keyboard' =>

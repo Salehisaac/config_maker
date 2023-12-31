@@ -82,9 +82,6 @@ class TelegramBot
                 array_push($keyboard, ['پنل مدیریت']);
             }
 
-
-
-
             $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
             $reply = json_encode($response);
         }
@@ -144,6 +141,7 @@ class TelegramBot
 
     // public function setProxy($chatId, $text, $before = null)
     // {
+
 
 
 
@@ -385,173 +383,11 @@ class TelegramBot
             echo 'Curl error: ' . curl_error($ch);
         }
 
-
         return $response;
+
     }
 
-    // public function handleInOrder($chatId , $text, $before = null)
-    // {
 
-    //     $db = new Database();
-    //     $user = $db->select("SELECT * FROM users WHERE id = ? " , [$chatId] );
-    //     $this->command = $user['command'];
-    //     var_dump($this->command);
-
-    //     if ($this->command == null)
-    //     {
-
-    //         // Start a conversation
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'خوش آمدید لطفا نام کانفیگ را وارد کنید' ,
-    //         );
-
-    //         $db->insert('users',['id' , 'command'] , [$chatId , 'set_name'] );
-    //     }
-
-    //     elseif ($this->command == 'set_name') {
-
-    //         $db->update('users', $chatId ,['name', 'command'], [$text, 'setLimitation' ]);
-
-    //         $this->sendMessage
-    //         (
-    //             $chatId,
-    //             'نام کاربری شما ثبت شد'
-    //             . 'حجم کانفیگ را وارد نمایید'
-    //         );
-
-
-    //     }
-    //     elseif ($this->command == 'setLimitation' && is_numeric($text)) {
-
-
-    //         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chatId]);
-    //         $user_id = $user['id'];
-    //         $db->update('users', $chatId, ['limitation' , 'command'], [$text, 'make' ]);
-    //         $this->command = 'setExpireDate' ;
-
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'مقدار حجم مورد نظر شما ثبت شد'
-    //         );
-
-    //         $this->setExpire($chatId, $text);
-
-    //     }
-
-    //     elseif ($this->command = 'make')
-    //     {
-    //         var_dump('hi');
-    //         $this->handlExpireOption($chatId);
-
-    //     }
-    //     // elseif (($_SESSION['response'] == 'Vless' || $_SESSION['response'] == 'Vmess') && $_SESSION['command'] = 'setProxy')
-    //     // {
-
-    //     //     $this->handleProxyOption($chatId, $_SESSION['response']);
-
-
-    //     // }
-    //     // elseif ($_SESSION['response'] == 'بله' && $_SESSION['command'] = 'setProxy') {
-    //     //     $user = $db->select("SELECT * FROM users WHERE username = ? ", [$_SESSION['username']]);
-    //     //     $user_id = $user['id'];
-
-
-    //     //     $existingArray = $db->selectProxiesById($user_id);
-    //     //     $existingArray['vless']['flow'] = 'xtls-rprx-vision';
-    //     //     $serializedData = json_encode($existingArray);
-    //     //     $db->update('users', $user_id, ['proxies'], [$serializedData]);
-
-    //     //     $keyboard = [
-    //     //         ['پایان', 'ادامه'],
-    //     //     ];
-    //     //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
-    //     //     $reply = json_encode($response);
-    //     //     $this->sendMessage(
-    //     //         $chatId,
-    //     //         'میخواهید پروکسی دیگه اضافه کنید ؟',
-    //     //         $reply
-    //     //     );
-    //     //     $_SESSION['command'] = 'wannaContinue';
-
-    //     // }
-    //     // elseif ($_SESSION['response'] == 'خیر' && $_SESSION['command'] = 'setProxy')
-    //     // {
-    //     //     $user = $db->select("SELECT * FROM users WHERE username = ? ", [$_SESSION['username']]);
-    //     //     $user_id = $user['id'];
-
-
-    //     //     $existingArray = $db->selectProxiesById($user_id);
-    //     //     $existingArray['vless'] = array();
-    //     //     $serializedData = json_encode($existingArray);
-    //     //     $db->update('users', $user_id, ['proxies'], [$serializedData]);
-
-    //     //     $keyboard = [
-    //     //         ['پایان', 'ادامه'],
-    //     //     ];
-    //     //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
-    //     //     $reply = json_encode($response);
-    //     //     $this->sendMessage(
-    //     //         $chatId,
-    //     //         'میخواهید پروکسی دیگه اضافه کنید ؟',
-    //     //         $reply
-    //     //     );
-    //     //     $_SESSION['command'] = 'wannaContinue';
-
-
-    //     // }
-
-
-    //     elseif ($this->command == 'make')
-    //      {
-
-    //         $this->sendMessage(
-    //             $chatId,
-    //             'میسازمش برات',
-
-    //         );
-
-
-
-
-    //         $db->update('users', $chatId, ['command'], ['fenish' ]);
-
-
-    //     }
-
-    //     // elseif ($_SESSION['response'] == 'ادامه' && $_SESSION['command'] == 'wannaContinue')
-    //     // {
-    //     //     echo '<pre>';
-    //     //     var_dump('hi');
-    //     //     $_SESSION['command'] = 'setProxy';
-    //     //     $this->setProxy($chatId, $text);
-    //     // }
-
-    //     // elseif ($_SESSION['response'] == 'پایان' && $_SESSION['command'] == 'wannaContinue')
-    //     // {
-    //     //     $_SESSION['command'] = 'make';
-    //     //     $keyboard = [
-    //     //         ['بریم'],
-    //     //     ];
-    //     //     $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
-    //     //     $reply = json_encode($response);
-    //     //     $this->sendMessage(
-    //     //         $chatId,
-    //     //         'بریم؟',
-    //     //         $reply
-    //     //     );
-
-    //     // }
-
-    //     else
-    //     {
-    //         echo "<pre>";
-    //         var_dump($_SESSION['response']);
-    //         var_dump($_SESSION['command']);
-    //     }
-
-
-    // }
 
     function token_panel($username_panel,$password_panel, $panel_url)
     {
@@ -579,6 +415,7 @@ class TelegramBot
         curl_close($curl_token);
 
         $body = json_decode( $token, true);
+
         return $body;
     }
 
