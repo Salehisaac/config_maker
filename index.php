@@ -9,12 +9,20 @@ use app\TelegramBot;
 use DataBase\Database;
 use Dotenv\Dotenv;
 
+
+
 use function PHPSTORM_META\type;
 require_once 'TelegramBot.php';
 require_once 'Database.php';
 require_once 'userThread.php';
 
 
+
+
+$bot = new TelegramBot("6844787417:AAGPxqzJjxu7PcgS32nYesxv8je-QKSgb_s" , "kian", "kian1381");
+
+var_dump($bot->sendMessage(291109889 , 'salam'));
+return 0;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../idea');
 $dotenv->load();
 
