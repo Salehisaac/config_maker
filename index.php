@@ -12,8 +12,6 @@ use Dotenv\Dotenv;
 use function PHPSTORM_META\type;
 require_once 'TelegramBot.php';
 require_once 'Database.php';
-require_once 'userThread.php';
-
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../idea');
 $dotenv->load();
@@ -223,62 +221,26 @@ if (isset($update['callback_query']))
         {
             $name_array = explode(" ", $template["name"]);
             $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
-            if($special_template)
+            $new_price = $template['default_price'];
+            if($special_template && $special_template['price'] !== null)
             {
-
-                $name = $template['name'];
-                foreach ($name_array as $name_part)
-                {
-
-                    if($name_part[0] == '-' || $name_part[1] == '-')
-                    {
-                        $name_part = str_replace('-', '', $name_part);
-                        $name = str_replace('-','', $name);
-                        $name_array = explode(" ", $name);
-
-                    }
-                    if(is_numeric($name_part))
-                    {
-                        $name = str_replace($name_part, number_format($special_template['price']), $name);
-                        $name_array = explode(" ", $name);
-
-                    }
-
-                }
-
-
-
+                $new_price = $special_template['price'];
             }
-
-            else
-            {
-
-                $name = $template['name'];
-
+            if ($new_price == -1 || $new_price == '-1'){
+                continue;
             }
-
-            $canBeMade = true;
-
-
+            $name = $template['name'];
             foreach ($name_array as $name_part)
             {
-
-                if(strpos($name_part,'-1') !== false)
+                if(is_numeric($name_part))
                 {
-
-                    $canBeMade = false;
+                    $name = str_replace($name_part, number_format($new_price), $name);
+                    $name_array = explode(" ", $name);
                 }
+
             }
-
-
-            if($canBeMade)
-            {
-                $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
-            }
-
-
+            $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
         }
-
         $replyMarkup = json_encode([
             'inline_keyboard' =>
                 $buttons
@@ -329,20 +291,12 @@ if (isset($update['callback_query']))
 
     elseif(explode( " " ,$callbackData)[0] == 'خرید')
     {
-
-
-
-
         $db = new Database();
-
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
-
-
-
-
-
+        $wait_message = "لطفا کمی صبر کنید ...";
+        $wait_message_id = $bot->sendMessage($chat_id, $wait_message);
 
 
         $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[1]);
@@ -358,13 +312,9 @@ if (isset($update['callback_query']))
 
         }
 
-
-
-
-
         $panel = $db->join('*' , 'templates' , 'panels' , 'templates.panel_id = panels.id' , 'templates.panel_id = ' . $selected['panel_id'] );
 
-        $username = $update['callback_query']['message']['chat']['username'];
+        $username = $user['username'];
 
         if($user['alter_name'] == 1 && explode(' ' ,$user['message'])[0] == 'alter_name')
         {
@@ -380,9 +330,6 @@ if (isset($update['callback_query']))
             }
 
         }
-
-
-
         $configs = $bot->search($username);
         if(count($configs) > 0)
         {
@@ -391,28 +338,22 @@ if (isset($update['callback_query']))
             $last_part_of_name = end($last_configs_name);
             $last_part_of_name = intval($last_part_of_name);
 
-            if (!is_int($last_part_of_name))
+            if (is_int($last_part_of_name))
             {
-                unset($last_configs_name[count($last_configs_name) - 1]);
+                $last_number = $last_part_of_name;
+            }else
+            {
+                $last_number = 0;
             }
-            $last_number = end($last_configs_name);
-        }
-
-        else
+        }else
         {
             $last_number = 0;
         }
 
-
-
-
-        $number = $last_number +1;
-
-        $username = $username .'_'. $number;
-
-
-
-
+        $number = $last_number + 1 ;
+        if ($number !== 1){
+            $username = $username .'_'. $number;
+        }
 
         $username = $bot->validName($username , $panel['url'] , $number);
 
@@ -443,8 +384,6 @@ if (isset($update['callback_query']))
             $timestampString = null ;
         }
 
-
-
         if($selected['limitation'] !== null)
         {
             $data_limit = intval($selected['limitation'] * (1024 ** 3));
@@ -456,12 +395,7 @@ if (isset($update['callback_query']))
             $data_limit = null ;
         }
 
-
-
-
-
         $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
-
 
         $config = $bot->getuser($username, $panel['url'])['subscription_url'];
 
@@ -474,9 +408,13 @@ if (isset($update['callback_query']))
                 {
                     break;
                 }
+                $sleep_message = "...";
+                $sleep_message_id = $bot->sendMessage($chat_id, $sleep_message);
                 sleep(7);
+                $bot->deleteMessage($chat_id,$sleep_message_id);
             }
         }
+
         if(strpos($config , '://') == false && $config !== null)
         {
             $config = $panel['url'] . $config;
@@ -487,7 +425,7 @@ if (isset($update['callback_query']))
             $config = false ;
         }
 
-
+        $bot->deleteMessage($chat_id,$wait_message_id);
         if($config)
         {
             $result =$db->insert('configs', ['name', 'expire', 'limitation','proxy', 'user_id', 'price' , 'panel_id' , 'expires_at'],[$username, $selected['expire'], $data_limit, $selected['proxy'], $chat_id, $price , $panel['id'], $timestampString  ]);
@@ -499,18 +437,10 @@ if (isset($update['callback_query']))
             $indebtedness += $price;
             $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
         }
-
         else
         {
             $bot->sendMessage($chat_id, "مشکلی پیش آمده لطفا دوباره امتحان کنید و در صورت عدم رفع مشکل با ادمین تماس حاصل فرمایید");
         }
-
-
-
-
-
-
-
 
 
     }
@@ -531,7 +461,7 @@ if (isset($update['callback_query']))
 
 
 
-        if($user['detail'] != 'User not found')
+        if($user['detail'] !== 'User not found')
         {
             $bot->removeuser($panel['url'] , $user['username']);
             $db->deleteConfig('configs' , $user['username'] , $panel['id']);
@@ -605,7 +535,7 @@ if (isset($update['callback_query']))
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
 
-        if ($config != null) {
+        if ($config !== null) {
             $buttons = [
                 [
                     ['text' => 'تمدید', 'callback_data' => 'update ' . $config['name'] . ' ' . $config['panel_id']],
@@ -707,60 +637,25 @@ if($user["is_verified"] == "approved")
                 {
                     $name_array = explode(" ", $template["name"]);
                     $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
-                    if($special_template)
+                    $new_price = $template['default_price'];
+                    if($special_template && $special_template['price'] !== null)
                     {
-
-                        $name = $template['name'];
-                        foreach ($name_array as $name_part)
-                        {
-
-                            if($name_part[0] == '-' || $name_part[1] == '-')
-                            {
-                                $name_part = str_replace('-', '', $name_part);
-                                $name = str_replace('-','', $name);
-                                $name_array = explode(" ", $name);
-
-                            }
-                            if(is_numeric($name_part))
-                            {
-                                $name = str_replace($name_part, number_format($special_template['price']), $name);
-                                $name_array = explode(" ", $name);
-
-                            }
-
-                        }
-
-
-
+                        $new_price = $special_template['price'];
                     }
-
-                    else
-                    {
-
-                        $name = $template['name'];
-
+                    if ($new_price == -1 || $new_price == '-1'){
+                        continue;
                     }
-
-                    $canBeMade = true;
-
-
+                    $name = $template['name'];
                     foreach ($name_array as $name_part)
                     {
-
-                        if(strpos($name_part,'-1') !== false)
+                        if(is_numeric($name_part))
                         {
-
-                            $canBeMade = false;
+                            $name = str_replace($name_part, number_format($new_price), $name);
+                            $name_array = explode(" ", $name);
                         }
+
                     }
-
-
-                    if($canBeMade)
-                    {
-                        $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
-                    }
-
-
+                    $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
                 }
 
                 $replyMarkup = json_encode([
@@ -791,62 +686,25 @@ if($user["is_verified"] == "approved")
                     {
                         $name_array = explode(" ", $template["name"]);
                         $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
-                        if($special_template)
+                        $new_price = $template['default_price'];
+                        if($special_template && $special_template['price'] !== null)
                         {
-
-                            $name = $template['name'];
-                            foreach ($name_array as $name_part)
-                            {
-
-                                if($name_part[0] == '-' || $name_part[1] == '-')
-                                {
-                                    $name_part = str_replace('-', '', $name_part);
-                                    $name = str_replace('-','', $name);
-                                    $name_array = explode(" ", $name);
-
-                                }
-                                if(is_numeric($name_part))
-                                {
-                                    $name = str_replace($name_part, number_format($special_template['price']), $name);
-                                    $name_array = explode(" ", $name);
-
-                                }
-
-                            }
-
-
-
+                            $new_price = $special_template['price'];
                         }
-
-                        else
-                        {
-
-                            $name = $template['name'];
-
+                        if ($new_price == -1 || $new_price == '-1'){
+                            continue;
                         }
-
-                        $canBeMade = true;
-
-
+                        $name = $template['name'];
                         foreach ($name_array as $name_part)
                         {
-
-                            if(strpos($name_part,'-1') !== false)
+                            if(is_numeric($name_part))
                             {
-
-                                $canBeMade = false;
+                                $name = str_replace($name_part, number_format($new_price), $name);
+                                $name_array = explode(" ", $name);
                             }
                         }
-
-
-                        if($canBeMade)
-                        {
-                            $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
-                        }
-
-
+                        $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
                     }
-
                     $replyMarkup = json_encode([
                         'inline_keyboard' =>
                             $buttons
@@ -1224,7 +1082,7 @@ if($user["is_verified"] == "approved")
 
 
 
-            if($user['detail'] != 'User not found')
+            if($user['detail'] !== 'User not found')
             {
                 $bot->removeuser($panel['url'] , $user['username']);
                 $db->deleteConfig('configs' , $user['username'] , $panel['id']);
@@ -1388,9 +1246,9 @@ if($user["is_verified"] == "approved")
 
         $db->update('users' , $chat_id , ['command'] , [null]);
         $keyboard = [
-            ['🌍 درخواست ها'],
+            ['درخواست ها'],
+            ['پیام های مشتریان'],
             ['🌍 بازگشت به منوی اصلی'],
-            ['🌍 پیام های مشتریان'],
         ];
         $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
         $reply = json_encode($response);
@@ -1398,7 +1256,7 @@ if($user["is_verified"] == "approved")
         $bot->sendMessage($chat_id, 'پنل مدیریت',$reply);
     }
 
-    elseif (isset($update['message']) && $update['message']['text'] == '🌍 درخواست ها')
+    elseif (isset($update['message']) && $update['message']['text'] == 'درخواست ها')
     {
         $db->update('users' , $chat_id , ['command'] , [null]);
         $requests = $db->selectAll("SELECT * FROM `users` WHERE `is_verified` = ?", ['unchecked']);
@@ -1431,7 +1289,7 @@ if($user["is_verified"] == "approved")
         $db->update('users' , $chat_id , ['command'] , [null]);
     }
 
-    elseif (isset($update['message']) && $update['message']['text'] == '🌍 پیام های مشتریان')
+    elseif (isset($update['message']) && $update['message']['text'] == 'پیام های مشتریان')
     {
         $messages = $db->selectAll('SELECT * FROM `support`');
 

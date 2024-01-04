@@ -826,21 +826,26 @@ class TelegramBot
 
     public function validName($username , $url_panel , $number)
     {
-        $user = $this->getuser($username, $url_panel );
+        $chat_id = 5628273659;
+        $user = $this->getuser($username, $url_panel);
         $i = $number;
         while ($user['detail'] != "User not found")
         {
-            $list = (explode('_', $username ));
+            $list = (explode('_', $username));
             $last_part = end($list);
-            $list[count($list) - 1] = $i ;
-            $username = implode('_', $list);
-            if (strpos($last_part,'u') !== false || strpos($last_part,'o') !== false)
+            if ($last_part == '2u' || $last_part == '2m' || $last_part == '3u' || $last_part == '3m')
             {
-                $this->sendMessage(291109889 , 'hi');
-                $list[count($list) - 2] = $i ;
-                $username = implode('_', $list);
+                $wtest1 = $bot->sendMessage($chat_id, 'detected as 2u2m '.$uesrname);
+                array_pop($list);
+                array_push($list, $i);
             }
-
+            elseif (is_int($last_part)){
+                $wtest1 = $bot->sendMessage($chat_id, 'detected as int '.$uesrname);
+                $list[count($list) - 1] = $i ;
+            }else{
+                array_push($list, $i);
+            }
+            $username = implode('_', $list);
             $user = $this->getuser($username, $url_panel);
             $i++;
         }
