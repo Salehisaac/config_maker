@@ -17,7 +17,7 @@ class Database
     private $dbHost = 'localhost';
     private $dbName = 'vpn';
     private $dbUsername = 'debian-sys-maint';
-    private $dbPassword = 'OYcmiOBeNnrzpopE';
+    private $dbPassword = 'osj3avGjHksLqHh6';
 
     function __construct()
     {

@@ -3,11 +3,26 @@
 namespace app;
 require __DIR__.'/vendor/autoload.php';
 
+
 use DataBase\Database;
 use DateInterval;
 use DateTime;
+use Endroid\QrCode\Color\Color;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Label\Label;
+use Endroid\QrCode\Logo\Logo;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Writer\ValidationException;
+
 
 require_once 'Database.php';
+include 'PhpQrCode/qrlib.php';
+
+
+
 
 
 class TelegramBot
@@ -59,7 +74,44 @@ class TelegramBot
 
 
         }*/
-    public function sendMessage($chatId, $text , $Myreply = null )
+    
+    
+    public function testQr($text)
+    {
+        $writer = new PngWriter();
+
+        // Create QR code
+        $qrCode = QrCode::create($text)
+            ->setEncoding(new Encoding('UTF-8'))
+            ->setErrorCorrectionLevel(ErrorCorrectionLevel::Low)
+            ->setSize(300)
+            ->setMargin(10)
+            ->setRoundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->setForegroundColor(new Color(0, 0, 0))
+            ->setBackgroundColor(new Color(255, 255, 255));
+        
+        // Create generic logo
+        $logo = Logo::create(__DIR__.'/assets/symfony.jpg')
+            ->setResizeToWidth(50)
+            ->setPunchoutBackground(true)
+        ;
+        
+        // Create generic label
+        $label = Label::create('Here you are')
+            ->setTextColor(new Color(0, 0, 0));
+        
+        $result = $writer->write($qrCode, $logo, $label);
+        
+        
+        // Validate the result
+        $validated_result = $writer->validateResult($result, $text);
+       
+        return $result->getString();
+        
+
+    }
+    
+     public function sendMessage($chatId, $text , $Myreply = null )
     {
 
 
@@ -551,6 +603,7 @@ class TelegramBot
     public function makeQRcode($url)
     {
         $url = 'https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=http%3A%2F%2F' . $url . '%2F&choe=UTF-8';
+        
 
 
         $ch = curl_init($url);
@@ -563,6 +616,7 @@ class TelegramBot
         }
 
         curl_close($ch);
+        
         return $response;
     }
 
@@ -572,7 +626,7 @@ class TelegramBot
 
         // Create a temporary file to store the image data
         $tempFile = tempnam(sys_get_temp_dir(), 'telegram_image');
-        file_put_contents($tempFile, $imageData);
+        file_put_contents($tempFile, $this->testQr($imageData));
 
         $db = new Database();
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
@@ -826,21 +880,26 @@ class TelegramBot
 
     public function validName($username , $url_panel , $number)
     {
-        $user = $this->getuser($username, $url_panel );
+        $chat_id = 5628273659;
+        $user = $this->getuser($username, $url_panel);
         $i = $number;
         while ($user['detail'] != "User not found")
         {
-            $list = (explode('_', $username ));
+            $list = (explode('_', $username));
             $last_part = end($list);
-            $list[count($list) - 1] = $i ;
-            $username = implode('_', $list);
-            if (strpos($last_part,'u') !== false || strpos($last_part,'o') !== false)
+            if ($last_part == '2u' || $last_part == '2m' || $last_part == '3u' || $last_part == '3m')
             {
-                $this->sendMessage(291109889 , 'hi');
-                $list[count($list) - 2] = $i ;
-                $username = implode('_', $list);
+                $wtest1 = $bot->sendMessage($chat_id, 'detected as 2u2m '.$uesrname);
+                array_pop($list);
+                array_push($list, $i);
             }
-
+            elseif (is_int($last_part)){
+                $wtest1 = $bot->sendMessage($chat_id, 'detected as int '.$uesrname);
+                $list[count($list) - 1] = $i ;
+            }else{
+                array_push($list, $i);
+            }
+            $username = implode('_', $list);
             $user = $this->getuser($username, $url_panel);
             $i++;
         }

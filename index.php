@@ -9,20 +9,12 @@ use app\TelegramBot;
 use DataBase\Database;
 use Dotenv\Dotenv;
 
-
-
 use function PHPSTORM_META\type;
 require_once 'TelegramBot.php';
 require_once 'Database.php';
-require_once 'userThread.php';
 
 
 
-
-$bot = new TelegramBot("6844787417:AAGPxqzJjxu7PcgS32nYesxv8je-QKSgb_s" , "kian", "kian1381");
-
-var_dump($bot->sendMessage(291109889 , 'salam'));
-return 0;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../idea');
 $dotenv->load();
 
@@ -31,6 +23,9 @@ $dotenv->load();
 $token = $_ENV['BOT_TOKEN'];
 $panel_username = $_ENV['PANEL_USERNAME'];
 $panel_paswword = $_ENV['PANEL_PASSWORD'];
+
+// $bot = new TelegramBot($token , $panel_username , $panel_paswword);
+// var_dump($bot->testQr('hi'));
 
 
 
@@ -231,62 +226,26 @@ if (isset($update['callback_query']))
         {
             $name_array = explode(" ", $template["name"]);
             $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
-            if($special_template)
+            $new_price = $template['default_price'];
+            if($special_template && $special_template['price'] !== null)
             {
-
-                $name = $template['name'];
-                foreach ($name_array as $name_part)
-                {
-
-                    if($name_part[0] == '-' || $name_part[1] == '-')
-                    {
-                        $name_part = str_replace('-', '', $name_part);
-                        $name = str_replace('-','', $name);
-                        $name_array = explode(" ", $name);
-
-                    }
-                    if(is_numeric($name_part))
-                    {
-                        $name = str_replace($name_part, number_format($special_template['price']), $name);
-                        $name_array = explode(" ", $name);
-
-                    }
-
-                }
-
-
-
+                $new_price = $special_template['price'];
             }
-
-            else
-            {
-
-                $name = $template['name'];
-
+            if ($new_price == -1 || $new_price == '-1'){
+                continue;
             }
-
-            $canBeMade = true;
-
-
+            $name = $template['name'];
             foreach ($name_array as $name_part)
             {
-
-                if(strpos($name_part,'-1') !== false)
+                if(is_numeric($name_part))
                 {
-
-                    $canBeMade = false;
+                    $name = str_replace($name_part, number_format($new_price), $name);
+                    $name_array = explode(" ", $name);
                 }
+
             }
-
-
-            if($canBeMade)
-            {
-                $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
-            }
-
-
+            $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
         }
-
         $replyMarkup = json_encode([
             'inline_keyboard' =>
                 $buttons
@@ -337,20 +296,12 @@ if (isset($update['callback_query']))
 
     elseif(explode( " " ,$callbackData)[0] == 'خرید')
     {
-
-
-
-
         $db = new Database();
-
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
-
-
-
-
-
+        $wait_message = "لطفا کمی صبر کنید ...";
+        $wait_message_id = $bot->sendMessage($chat_id, $wait_message);
 
 
         $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[1]);
@@ -366,13 +317,9 @@ if (isset($update['callback_query']))
 
         }
 
-
-
-
-
         $panel = $db->join('*' , 'templates' , 'panels' , 'templates.panel_id = panels.id' , 'templates.panel_id = ' . $selected['panel_id'] );
 
-        $username = $update['callback_query']['message']['chat']['username'];
+        $username = $user['username'];
 
         if($user['alter_name'] == 1 && explode(' ' ,$user['message'])[0] == 'alter_name')
         {
@@ -388,9 +335,6 @@ if (isset($update['callback_query']))
             }
 
         }
-
-
-
         $configs = $bot->search($username);
         if(count($configs) > 0)
         {
@@ -399,28 +343,22 @@ if (isset($update['callback_query']))
             $last_part_of_name = end($last_configs_name);
             $last_part_of_name = intval($last_part_of_name);
 
-            if (!is_int($last_part_of_name))
+            if (is_int($last_part_of_name))
             {
-                unset($last_configs_name[count($last_configs_name) - 1]);
+                $last_number = $last_part_of_name;
+            }else
+            {
+                $last_number = 0;
             }
-            $last_number = end($last_configs_name);
-        }
-
-        else
+        }else
         {
             $last_number = 0;
         }
 
-
-
-
-        $number = $last_number +1;
-
-        $username = $username .'_'. $number;
-
-
-
-
+        $number = $last_number + 1 ;
+        if ($number !== 1){
+            $username = $username .'_'. $number;
+        }
 
         $username = $bot->validName($username , $panel['url'] , $number);
 
@@ -451,8 +389,6 @@ if (isset($update['callback_query']))
             $timestampString = null ;
         }
 
-
-
         if($selected['limitation'] !== null)
         {
             $data_limit = intval($selected['limitation'] * (1024 ** 3));
@@ -464,12 +400,7 @@ if (isset($update['callback_query']))
             $data_limit = null ;
         }
 
-
-
-
-
         $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
-
 
         $config = $bot->getuser($username, $panel['url'])['subscription_url'];
 
@@ -482,9 +413,13 @@ if (isset($update['callback_query']))
                 {
                     break;
                 }
+                $sleep_message = "...";
+                $sleep_message_id = $bot->sendMessage($chat_id, $sleep_message);
                 sleep(7);
+                $bot->deleteMessage($chat_id,$sleep_message_id);
             }
         }
+
         if(strpos($config , '://') == false && $config !== null)
         {
             $config = $panel['url'] . $config;
@@ -495,30 +430,21 @@ if (isset($update['callback_query']))
             $config = false ;
         }
 
-
+        $bot->deleteMessage($chat_id,$wait_message_id);
         if($config)
         {
+            
             $result =$db->insert('configs', ['name', 'expire', 'limitation','proxy', 'user_id', 'price' , 'panel_id' , 'expires_at'],[$username, $selected['expire'], $data_limit, $selected['proxy'], $chat_id, $price , $panel['id'], $timestampString  ]);
-            $QRCode = $bot->makeQRcode($config);
-            $bot->sendImage($chat_id, $QRCode, $config, $username );
-
+            $bot->sendImage($chat_id, $config, $config, $username );
             $user = $db->selectAll("SELECT * FROM users WHERE `id` = ? " , [$chat_id]);
             $indebtedness = $user[0]['indebtedness'];
             $indebtedness += $price;
             $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
         }
-
         else
         {
             $bot->sendMessage($chat_id, "مشکلی پیش آمده لطفا دوباره امتحان کنید و در صورت عدم رفع مشکل با ادمین تماس حاصل فرمایید");
         }
-
-
-
-
-
-
-
 
 
     }
@@ -539,7 +465,7 @@ if (isset($update['callback_query']))
 
 
 
-        if($user['detail'] != 'User not found')
+        if($user['detail'] !== 'User not found')
         {
             $bot->removeuser($panel['url'] , $user['username']);
             $db->deleteConfig('configs' , $user['username'] , $panel['id']);
@@ -613,7 +539,7 @@ if (isset($update['callback_query']))
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
 
-        if ($config != null) {
+        if ($config !== null) {
             $buttons = [
                 [
                     ['text' => 'تمدید', 'callback_data' => 'update ' . $config['name'] . ' ' . $config['panel_id']],
@@ -715,60 +641,25 @@ if($user["is_verified"] == "approved")
                 {
                     $name_array = explode(" ", $template["name"]);
                     $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
-                    if($special_template)
+                    $new_price = $template['default_price'];
+                    if($special_template && $special_template['price'] !== null)
                     {
-
-                        $name = $template['name'];
-                        foreach ($name_array as $name_part)
-                        {
-
-                            if($name_part[0] == '-' || $name_part[1] == '-')
-                            {
-                                $name_part = str_replace('-', '', $name_part);
-                                $name = str_replace('-','', $name);
-                                $name_array = explode(" ", $name);
-
-                            }
-                            if(is_numeric($name_part))
-                            {
-                                $name = str_replace($name_part, number_format($special_template['price']), $name);
-                                $name_array = explode(" ", $name);
-
-                            }
-
-                        }
-
-
-
+                        $new_price = $special_template['price'];
                     }
-
-                    else
-                    {
-
-                        $name = $template['name'];
-
+                    if ($new_price == -1 || $new_price == '-1'){
+                        continue;
                     }
-
-                    $canBeMade = true;
-
-
+                    $name = $template['name'];
                     foreach ($name_array as $name_part)
                     {
-
-                        if(strpos($name_part,'-1') !== false)
+                        if(is_numeric($name_part))
                         {
-
-                            $canBeMade = false;
+                            $name = str_replace($name_part, number_format($new_price), $name);
+                            $name_array = explode(" ", $name);
                         }
+
                     }
-
-
-                    if($canBeMade)
-                    {
-                        $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
-                    }
-
-
+                    $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
                 }
 
                 $replyMarkup = json_encode([
@@ -799,62 +690,25 @@ if($user["is_verified"] == "approved")
                     {
                         $name_array = explode(" ", $template["name"]);
                         $special_template = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . $template['id']);
-                        if($special_template)
+                        $new_price = $template['default_price'];
+                        if($special_template && $special_template['price'] !== null)
                         {
-
-                            $name = $template['name'];
-                            foreach ($name_array as $name_part)
-                            {
-
-                                if($name_part[0] == '-' || $name_part[1] == '-')
-                                {
-                                    $name_part = str_replace('-', '', $name_part);
-                                    $name = str_replace('-','', $name);
-                                    $name_array = explode(" ", $name);
-
-                                }
-                                if(is_numeric($name_part))
-                                {
-                                    $name = str_replace($name_part, number_format($special_template['price']), $name);
-                                    $name_array = explode(" ", $name);
-
-                                }
-
-                            }
-
-
-
+                            $new_price = $special_template['price'];
                         }
-
-                        else
-                        {
-
-                            $name = $template['name'];
-
+                        if ($new_price == -1 || $new_price == '-1'){
+                            continue;
                         }
-
-                        $canBeMade = true;
-
-
+                        $name = $template['name'];
                         foreach ($name_array as $name_part)
                         {
-
-                            if(strpos($name_part,'-1') !== false)
+                            if(is_numeric($name_part))
                             {
-
-                                $canBeMade = false;
+                                $name = str_replace($name_part, number_format($new_price), $name);
+                                $name_array = explode(" ", $name);
                             }
                         }
-
-
-                        if($canBeMade)
-                        {
-                            $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
-                        }
-
-
+                        $buttons[] = [['text' => $name, 'callback_data' => strval($template['id'] . ' config')]];
                     }
-
                     $replyMarkup = json_encode([
                         'inline_keyboard' =>
                             $buttons
@@ -913,158 +767,158 @@ if($user["is_verified"] == "approved")
 
     }
 
-    elseif (isset($update['callback_query']))
-    {
+    // elseif (isset($update['callback_query']))
+    // {
 
-        $callbackData = $update['callback_query']['data'];
-        $callbackQueryId = $update['callback_query']['id'];
-        $chat_id = $update['callback_query']['message']['chat']['id'];
-        $bot->answerCallbackQuery($callbackQueryId, $callbackData);
-
-
+    //     $callbackData = $update['callback_query']['data'];
+    //     $callbackQueryId = $update['callback_query']['id'];
+    //     $chat_id = $update['callback_query']['message']['chat']['id'];
+    //     $bot->answerCallbackQuery($callbackQueryId, $callbackData);
 
 
 
-        if (explode( " " ,$callbackData)[1] == 'config')
-        {
-
-            $db = new Database();
-            $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
-            $message_id = $user['message_id'];
-            $bot->deleteMessage($chat_id,$message_id);
-
-            $configs = $db->selectAll("SELECT * FROM configs WHERE user_id = ? ", [$chat_id]);
-            $countConfigs = count($configs);
-
-            $templates_id = [];
-            $templates = $bot->findTemplatesForUser($chat_id);
-            foreach ($templates as $template)
-            {
-                array_push($templates_id, $template["template_id"]);
-            }
-
-            if(in_array(explode( " " ,$callbackData)[0], $templates_id))
-            {
-                $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[0]);
-                $price = $selected['price'];
-                $price_show = $price;
-            }
-
-            else
-            {
-                $selected = $db->select("SELECT * FROM templates WHERE id = ? ", [explode( " " ,$callbackData)[0]]);
-                $price = $selected['default_price'];
-                $price_show = $price;
-            }
 
 
+    //     if (explode( " " ,$callbackData)[1] == 'config')
+    //     {
 
-            $username = $update['callback_query']['message']['chat']['username'] . '_'. $countConfigs+1;
+    //         $db = new Database();
+    //         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+    //         $message_id = $user['message_id'];
+    //         $bot->deleteMessage($chat_id,$message_id);
 
-            $proxies = json_decode($selected['proxy'] , true);
-            $nameprotocol = array();
-            $nameprotocol['vless']['flow'] = $proxies['vless']['flow'];
-            $proxies = $nameprotocol;
+    //         $configs = $db->selectAll("SELECT * FROM configs WHERE user_id = ? ", [$chat_id]);
+    //         $countConfigs = count($configs);
 
-            if($selected['expire'] !== null)
-            {
-                $currentDate = new DateTime();
+    //         $templates_id = [];
+    //         $templates = $bot->findTemplatesForUser($chat_id);
+    //         foreach ($templates as $template)
+    //         {
+    //             array_push($templates_id, $template["template_id"]);
+    //         }
 
+    //         if(in_array(explode( " " ,$callbackData)[0], $templates_id))
+    //         {
+    //             $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[0]);
+    //             $price = $selected['price'];
+    //             $price_show = $price;
+    //         }
 
-                $currentDate->add(new DateInterval("P{$selected['expire']}D"));
-
-
-                $newTimestamp = strtotime($currentDate->format('Y-m-d'));
-                $expire = $newTimestamp;
-                $expire_show = $selected['expire'];
-            }
-            else
-            {
-                $expire = null;
-                $expire_show = '∞';
-            }
-
-            if($selected['limitation'] !== null)
-            {
-                $data_limit = intval($selected['limitation']);
-                $data_show = $selected['limitation'];
-            }
-            else
-            {
-                $data_limit = null;
-                $data_show = '∞';
-
-            }
+    //         else
+    //         {
+    //             $selected = $db->select("SELECT * FROM templates WHERE id = ? ", [explode( " " ,$callbackData)[0]]);
+    //             $price = $selected['default_price'];
+    //             $price_show = $price;
+    //         }
 
 
+
+    //         $username = $update['callback_query']['message']['chat']['username'] . '_'. $countConfigs+1;
+
+    //         $proxies = json_decode($selected['proxy'] , true);
+    //         $nameprotocol = array();
+    //         $nameprotocol['vless']['flow'] = $proxies['vless']['flow'];
+    //         $proxies = $nameprotocol;
+
+    //         if($selected['expire'] !== null)
+    //         {
+    //             $currentDate = new DateTime();
+
+
+    //             $currentDate->add(new DateInterval("P{$selected['expire']}D"));
+
+
+    //             $newTimestamp = strtotime($currentDate->format('Y-m-d'));
+    //             $expire = $newTimestamp;
+    //             $expire_show = $selected['expire'];
+    //         }
+    //         else
+    //         {
+    //             $expire = null;
+    //             $expire_show = '∞';
+    //         }
+
+    //         if($selected['limitation'] !== null)
+    //         {
+    //             $data_limit = intval($selected['limitation']);
+    //             $data_show = $selected['limitation'];
+    //         }
+    //         else
+    //         {
+    //             $data_limit = null;
+    //             $data_show = '∞';
+
+    //         }
 
 
 
 
 
 
-            $message = " 
-                            💻 کانفیگ {$expire_show} روزه  
+
+
+    //         $message = " 
+    //                         💻 کانفیگ {$expire_show} روزه  
         
-                    🦅 حجم : {$data_show} گیگ  
+    //                 🦅 حجم : {$data_show} گیگ  
         
-                    ❄️ قیمت : {$price_show}   هزار  تومن
+    //                 ❄️ قیمت : {$price_show}   هزار  تومن
         
-                    ✔️ در صورت مطمئن بودن روی خرید کلیک کنید";
+    //                 ✔️ در صورت مطمئن بودن روی خرید کلیک کنید";
 
 
-            $reply = json_encode([
-                'inline_keyboard' =>
-                    [
-                        [
-                            ['text' => "خرید", 'callback_data' => "خرید " . $callbackData]
-                        ]
-                    ]
+    //         $reply = json_encode([
+    //             'inline_keyboard' =>
+    //                 [
+    //                     [
+    //                         ['text' => "خرید", 'callback_data' => "خرید " . $callbackData]
+    //                     ]
+    //                 ]
 
-            ]);
+    //         ]);
 
 
-            $message_id = $bot->sendMessage($chat_id, $message , $reply);
-            $db->update('users', $chat_id, ['message_id'], [$message_id]);
+    //         $message_id = $bot->sendMessage($chat_id, $message , $reply);
+    //         $db->update('users', $chat_id, ['message_id'], [$message_id]);
 
 
 
 
-        }
+    //     }
 
-        elseif(explode( " " ,$callbackData)[1] == 'approve')
-        {
-            $bot->sendMessage($chat_id, 'hi');
-            $message_id = $db->select("SELECT * FROM `users` WHERE `id` = ?" , explode( " " ,$callbackData)[0])['message_id'];
-            $bot->deleteMessage($chat_id, $message_id);
-            $db->update('users', explode( " " ,$callbackData)[0], ['is_verified' , 'message_id'], ['approved' , null]);
+    //     elseif(explode( " " ,$callbackData)[1] == 'approve')
+    //     {
+    //         $bot->sendMessage($chat_id, 'hi');
+    //         $message_id = $db->select("SELECT * FROM `users` WHERE `id` = ?" , explode( " " ,$callbackData)[0])['message_id'];
+    //         $bot->deleteMessage($chat_id, $message_id);
+    //         $db->update('users', explode( " " ,$callbackData)[0], ['is_verified' , 'message_id'], ['approved' , null]);
 
-        }
+    //     }
 
 
 
-        // elseif(explode( " " ,$callbackData)[1] == 'panel_search')
-        // {
+    //     // elseif(explode( " " ,$callbackData)[1] == 'panel_search')
+    //     // {
 
-        //    $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
-        //    $last_message_id = $user['message_id'];
-        //    $bot->deleteMessage($chat_id,$last_message_id);
-        //    $db->update('users', $chat_id , ['message' , 'command' , 'message_id'] , ['panel_id ' . explode( " " ,$callbackData)[0] , 'set_name' , $message_id] );
-        // }
+    //     //    $user= $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
+    //     //    $last_message_id = $user['message_id'];
+    //     //    $bot->deleteMessage($chat_id,$last_message_id);
+    //     //    $db->update('users', $chat_id , ['message' , 'command' , 'message_id'] , ['panel_id ' . explode( " " ,$callbackData)[0] , 'set_name' , $message_id] );
+    //     // }
 
 
 
-        // elseif(explode( " " ,$callbackData)[0] == 'خرید')
-        // {
+    //     // elseif(explode( " " ,$callbackData)[0] == 'خرید')
+    //     // {
 
 
 
 
-        //     $db = new Database();
+    //     //     $db = new Database();
 
-        //     $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
-        //     $message_id = $user['message_id'];
-        //     $bot->deleteMessage($chat_id,$message_id);
+    //     //     $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+    //     //     $message_id = $user['message_id'];
+    //     //     $bot->deleteMessage($chat_id,$message_id);
 
 
 
@@ -1072,236 +926,236 @@ if($user["is_verified"] == "approved")
 
 
 
-        //     $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[1]);
-        //     $price = $selected['price'];
-        //     $price_show = $price;
+    //     //     $selected = $db->join('*' , 'user_templates' , 'templates' , 'user_templates.template_id = templates.id' , 'user_templates.user_id = ' . $chat_id . ' AND user_templates.template_id = ' . explode( " " ,$callbackData)[1]);
+    //     //     $price = $selected['price'];
+    //     //     $price_show = $price;
 
-        //     if($selected == null)
-        //     {
+    //     //     if($selected == null)
+    //     //     {
 
-        //         $selected = $db->select("SELECT * FROM templates WHERE `id` = ? " , [explode( " " ,$callbackData)[1]]);
-        //         $price = $selected['default_price'];
-        //         $price_show = $price;
+    //     //         $selected = $db->select("SELECT * FROM templates WHERE `id` = ? " , [explode( " " ,$callbackData)[1]]);
+    //     //         $price = $selected['default_price'];
+    //     //         $price_show = $price;
 
-        //     }
+    //     //     }
 
 
 
 
 
-        //     $panel = $db->join('*' , 'templates' , 'panels' , 'templates.panel_id = panels.id' , 'templates.panel_id = ' . $selected['panel_id'] );
+    //     //     $panel = $db->join('*' , 'templates' , 'panels' , 'templates.panel_id = panels.id' , 'templates.panel_id = ' . $selected['panel_id'] );
 
-        //     $username = $update['callback_query']['message']['chat']['username'];
+    //     //     $username = $update['callback_query']['message']['chat']['username'];
 
-        //     if($user['alter_name'] == 1 && explode(' ' ,$user['message'])[0] == 'alter_name')
-        //     {
-        //         $special_template = $db->select('SELECT * FROM `user_templates` WHERE `user_id` = ? AND `template_id` = ?',[$chat_id , explode( " " ,$callbackData)[1]] );
+    //     //     if($user['alter_name'] == 1 && explode(' ' ,$user['message'])[0] == 'alter_name')
+    //     //     {
+    //     //         $special_template = $db->select('SELECT * FROM `user_templates` WHERE `user_id` = ? AND `template_id` = ?',[$chat_id , explode( " " ,$callbackData)[1]] );
 
-        //         if($special_template)
-        //         {
-        //             $username = explode(' ' ,$user['message'])[1] . '_' . $special_template['name'];
-        //         }
-        //         else
-        //         {
-        //             $username = explode(' ' ,$user['message'])[1];
-        //         }
+    //     //         if($special_template)
+    //     //         {
+    //     //             $username = explode(' ' ,$user['message'])[1] . '_' . $special_template['name'];
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             $username = explode(' ' ,$user['message'])[1];
+    //     //         }
 
-        //     }
+    //     //     }
 
 
 
-        //     $configs = $bot->search($username);
-        //     if(count($configs) > 0)
-        //     {
+    //     //     $configs = $bot->search($username);
+    //     //     if(count($configs) > 0)
+    //     //     {
 
-        //         $last_configs_name = explode('_', $configs[sizeof($configs) -1]['name']);
-        //         $last_part_of_name = end($last_configs_name);
-        //         $last_part_of_name = intval($last_part_of_name);
+    //     //         $last_configs_name = explode('_', $configs[sizeof($configs) -1]['name']);
+    //     //         $last_part_of_name = end($last_configs_name);
+    //     //         $last_part_of_name = intval($last_part_of_name);
 
-        //         if (!is_int($last_part_of_name))
-        //         {
-        //             unset($last_configs_name[count($last_configs_name) - 1]);
-        //         }
-        //         $last_number = end($last_configs_name);
-        //     }
+    //     //         if (!is_int($last_part_of_name))
+    //     //         {
+    //     //             unset($last_configs_name[count($last_configs_name) - 1]);
+    //     //         }
+    //     //         $last_number = end($last_configs_name);
+    //     //     }
 
-        //     else
-        //     {
-        //         $last_number = 0;
-        //     }
+    //     //     else
+    //     //     {
+    //     //         $last_number = 0;
+    //     //     }
 
 
 
 
-        //     $number = $last_number +1;
+    //     //     $number = $last_number +1;
 
-        //     $username = $username .'_'. $number;
+    //     //     $username = $username .'_'. $number;
 
 
 
 
 
-        //     $username = $bot->validName($username , $panel['url'] , $number);
+    //     //     $username = $bot->validName($username , $panel['url'] , $number);
 
-        //     $proxies = json_decode($selected['proxy'] , true);
-        //     $nameprotocol = array();
-        //     $nameprotocol['vless'] = $proxies['vless'];
-        //     $proxies = $nameprotocol;
+    //     //     $proxies = json_decode($selected['proxy'] , true);
+    //     //     $nameprotocol = array();
+    //     //     $nameprotocol['vless'] = $proxies['vless'];
+    //     //     $proxies = $nameprotocol;
 
 
-        //     $currentDate = new DateTime();
-        //     $futureDateTime = clone $currentDate;
+    //     //     $currentDate = new DateTime();
+    //     //     $futureDateTime = clone $currentDate;
 
 
-        //     if($selected['expire'] !== null)
-        //     {
-        //         $hours =($selected['expire'] * 24) + 2 ;
-        //         $futureDateTime->modify('+' . $hours . 'hours');
-        //         $futureTimestamp = $futureDateTime->getTimestamp();
-        //         $timestampString = date('Y-m-d H:i:s', $futureTimestamp);
-        //         $expire = $futureTimestamp;
-        //     }
-        //     else
-        //     {
-        //         $expire = null ;
-        //         $timestampString = null ;
-        //     }
+    //     //     if($selected['expire'] !== null)
+    //     //     {
+    //     //         $hours =($selected['expire'] * 24) + 2 ;
+    //     //         $futureDateTime->modify('+' . $hours . 'hours');
+    //     //         $futureTimestamp = $futureDateTime->getTimestamp();
+    //     //         $timestampString = date('Y-m-d H:i:s', $futureTimestamp);
+    //     //         $expire = $futureTimestamp;
+    //     //     }
+    //     //     else
+    //     //     {
+    //     //         $expire = null ;
+    //     //         $timestampString = null ;
+    //     //     }
 
 
 
-        //     if($selected['limitation'] !== null)
-        //     {
-        //         $data_limit = intval($selected['limitation'] * (1024 ** 3));
-        //         $data_show = $selected['limitation'];
-        //     }
+    //     //     if($selected['limitation'] !== null)
+    //     //     {
+    //     //         $data_limit = intval($selected['limitation'] * (1024 ** 3));
+    //     //         $data_show = $selected['limitation'];
+    //     //     }
 
-        //     else
-        //     {
-        //         $data_limit = null ;
-        //     }
+    //     //     else
+    //     //     {
+    //     //         $data_limit = null ;
+    //     //     }
 
 
 
 
 
-        //         $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
+    //     //         $result = $bot->makeUser($chat_id ,$username, $proxies, $expire, $data_limit, $panel['url']);
 
-        //         $config = $bot->getuser($username, $panel['url'])['subscription_url'];
+    //     //         $config = $bot->getuser($username, $panel['url'])['subscription_url'];
 
-        //         if($config == null)
-        //         {
-        //             $config = $bot->getuser($username, $panel['url'])['subscription_url'];
-        //         }
-        //         if(strpos($config , '://') == false)
-        //             {
-        //                 $config = $panel['url'] . $config;
-        //             }
+    //     //         if($config == null)
+    //     //         {
+    //     //             $config = $bot->getuser($username, $panel['url'])['subscription_url'];
+    //     //         }
+    //     //         if(strpos($config , '://') == false)
+    //     //             {
+    //     //                 $config = $panel['url'] . $config;
+    //     //             }
 
 
-        //         if($config)
-        //         {
-        //             $result =$db->insert('configs', ['name', 'expire', 'limitation','proxy', 'user_id', 'price' , 'panel_id' , 'expires_at'],[$username, $selected['expire'], $data_limit, $selected['proxy'], $chat_id, $price , $panel['id'], $timestampString  ]);
-        //             $QRCode = $bot->makeQRcode($config);
-        //             $bot->sendImage($chat_id, $QRCode, $config, $username );
+    //     //         if($config)
+    //     //         {
+    //     //             $result =$db->insert('configs', ['name', 'expire', 'limitation','proxy', 'user_id', 'price' , 'panel_id' , 'expires_at'],[$username, $selected['expire'], $data_limit, $selected['proxy'], $chat_id, $price , $panel['id'], $timestampString  ]);
+    //     //             $QRCode = $bot->makeQRcode($config);
+    //     //             $bot->sendImage($chat_id, $QRCode, $config, $username );
 
-        //             $user = $db->selectAll("SELECT * FROM users WHERE `id` = ? " , [$chat_id]);
-        //             $indebtedness = $user[0]['indebtedness'];
-        //             $indebtedness += $price;
-        //             $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
-        //         }
-        //         else
-        //         {
-        //             $bot->sendMessage($chat_id, "مشکلی پیش آمده لطفا دوباره امتحان کنید و در صورت عدم رفع مشکل با ادمین تماس حاصل فرمایید");
-        //         }
+    //     //             $user = $db->selectAll("SELECT * FROM users WHERE `id` = ? " , [$chat_id]);
+    //     //             $indebtedness = $user[0]['indebtedness'];
+    //     //             $indebtedness += $price;
+    //     //             $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
+    //     //         }
+    //     //         else
+    //     //         {
+    //     //             $bot->sendMessage($chat_id, "مشکلی پیش آمده لطفا دوباره امتحان کنید و در صورت عدم رفع مشکل با ادمین تماس حاصل فرمایید");
+    //     //         }
 
-        // }
+    //     // }
 
-        elseif(explode( " " ,$callbackData)[0] == 'delete')
-        {
+    //     elseif(explode( " " ,$callbackData)[0] == 'delete')
+    //     {
 
-            $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [explode( " " ,$callbackData)[2]] );
-            $db_user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
-            $user = $bot->getuser(explode( " " ,$callbackData)[1] , $panel['url']);
-            $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id`=?" , [explode( " " ,$callbackData)[1] , $panel['id']]);
-            $price = $config['price'];
-            $indebtedness = $db_user['indebtedness'];
-            $indebtedness -= $price;
-            $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
-            $message_id = $db_user['message_id'];
-            $bot->deleteMessage($chat_id,$message_id);
+    //         $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [explode( " " ,$callbackData)[2]] );
+    //         $db_user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+    //         $user = $bot->getuser(explode( " " ,$callbackData)[1] , $panel['url']);
+    //         $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id`=?" , [explode( " " ,$callbackData)[1] , $panel['id']]);
+    //         $price = $config['price'];
+    //         $indebtedness = $db_user['indebtedness'];
+    //         $indebtedness -= $price;
+    //         $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
+    //         $message_id = $db_user['message_id'];
+    //         $bot->deleteMessage($chat_id,$message_id);
 
 
 
-            if($user['detail'] != 'User not found')
-            {
-                $bot->removeuser($panel['url'] , $user['username']);
-                $db->deleteConfig('configs' , $user['username'] , $panel['id']);
-                $bot->sendMessage($chat_id, 'کانفیگ شما حذف شد');
-            }
+    //         if($user['detail'] !== 'User not found')
+    //         {
+    //             $bot->removeuser($panel['url'] , $user['username']);
+    //             $db->deleteConfig('configs' , $user['username'] , $panel['id']);
+    //             $bot->sendMessage($chat_id, 'کانفیگ شما حذف شد');
+    //         }
 
-            else
-            {
-                $db->deleteConfig('configs' , explode( " " ,$callbackData)[1] , $panel['id']);
-                $bot->sendMessage($chat_id, ' کانفیگ شما حذف شد');
-            }
+    //         else
+    //         {
+    //             $db->deleteConfig('configs' , explode( " " ,$callbackData)[1] , $panel['id']);
+    //             $bot->sendMessage($chat_id, ' کانفیگ شما حذف شد');
+    //         }
 
-        }
+    //     }
 
-        elseif(explode( " " ,$callbackData)[0] == 'sub_link')
-        {
-            $db = new Database();
-            $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
-            $message_id = $user['message_id'];
-            $bot->deleteMessage($chat_id,$message_id);
+    //     elseif(explode( " " ,$callbackData)[0] == 'sub_link')
+    //     {
+    //         $db = new Database();
+    //         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+    //         $message_id = $user['message_id'];
+    //         $bot->deleteMessage($chat_id,$message_id);
 
 
-            $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [explode( " " ,$callbackData)[2]] );
-            $config = $bot->getuser(explode( " " ,$callbackData)[1], $panel['url'])['subscription_url'];
-            $url = $panel['url'] . $config;
-            $QRCode = $bot->makeQRcode($url);
-            $bot->sendImage($chat_id, $QRCode, $config, explode( " " ,$callbackData)[1]);
-        }
+    //         $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?", [explode( " " ,$callbackData)[2]] );
+    //         $config = $bot->getuser(explode( " " ,$callbackData)[1], $panel['url'])['subscription_url'];
+    //         $url = $panel['url'] . $config;
+    //         $QRCode = $bot->makeQRcode($url);
+    //         $bot->sendImage($chat_id, $QRCode, $config, explode( " " ,$callbackData)[1]);
+    //     }
 
-        elseif(explode( " " ,$callbackData)[0] == 'update')
-        {
-            $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id` = ? " , [explode( " " ,$callbackData)[1],explode( " " ,$callbackData)[2]] );
-            $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?" , [explode( " " ,$callbackData)[2]] );
-            $marzban_config = $bot->getuser(explode( " " ,$callbackData)[1], $panel['url'])['subscription_url'];
-            $user = $db->select("SELECT * FROM `users` WHERE `id` = ?" , [$chat_id]);
-            $message_id = $user['message_id'];
-            $bot->deleteMessage($chat_id,$message_id);
-            if($config['expires_at'] !== null)
-            {
-                $bot->Extend($panel , explode( " " ,$callbackData)[1]);
-            }
-            $bot->ResetUserDataUsage(explode( " " ,$callbackData)[0] , $panel["url"]);
-            $price = $config['price'];
-            $indebtedness = $user['indebtedness'];
-            $indebtedness += $price;
-            $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
-            $bot->sendMessage($chat_id , 'کانفیگ شما اپدیت شد');
-            $url = $panel['url'] . $marzban_config;
-            $QRCode = $bot->makeQRcode($url);
-            $bot->sendImage($chat_id, $QRCode, $url, explode( " " ,$callbackData)[1]);
+    //     elseif(explode( " " ,$callbackData)[0] == 'update')
+    //     {
+    //         $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id` = ? " , [explode( " " ,$callbackData)[1],explode( " " ,$callbackData)[2]] );
+    //         $panel = $db->select("SELECT * FROM `panels` WHERE `id` = ?" , [explode( " " ,$callbackData)[2]] );
+    //         $marzban_config = $bot->getuser(explode( " " ,$callbackData)[1], $panel['url'])['subscription_url'];
+    //         $user = $db->select("SELECT * FROM `users` WHERE `id` = ?" , [$chat_id]);
+    //         $message_id = $user['message_id'];
+    //         $bot->deleteMessage($chat_id,$message_id);
+    //         if($config['expires_at'] !== null)
+    //         {
+    //             $bot->Extend($panel , explode( " " ,$callbackData)[1]);
+    //         }
+    //         $bot->ResetUserDataUsage(explode( " " ,$callbackData)[0] , $panel["url"]);
+    //         $price = $config['price'];
+    //         $indebtedness = $user['indebtedness'];
+    //         $indebtedness += $price;
+    //         $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
+    //         $bot->sendMessage($chat_id , 'کانفیگ شما اپدیت شد');
+    //         $url = $panel['url'] . $marzban_config;
+    //         $QRCode = $bot->makeQRcode($url);
+    //         $bot->sendImage($chat_id, $QRCode, $url, explode( " " ,$callbackData)[1]);
 
 
-        }
+    //     }
 
-        elseif(explode( " " ,$callbackData)[0] == 'return')
-        {
-            $message_id = $user['message_id'];
-            $bot->deleteMessage($chat_id,$message_id);
-            $message_id = $bot->sendMessage($chat_id ,'خوش آمدید دستور مورد نظر خود را انتخاب کنید');
-            $db->update('users', $chat_id, ['message_id'], [$message_id]);
-        }
+    //     elseif(explode( " " ,$callbackData)[0] == 'return')
+    //     {
+    //         $message_id = $user['message_id'];
+    //         $bot->deleteMessage($chat_id,$message_id);
+    //         $message_id = $bot->sendMessage($chat_id ,'خوش آمدید دستور مورد نظر خود را انتخاب کنید');
+    //         $db->update('users', $chat_id, ['message_id'], [$message_id]);
+    //     }
 
-        else
-        {
+    //     else
+    //     {
 
-            error_log('Received unexpected callback data: ' . $callbackData);
-        }
+    //         error_log('Received unexpected callback data: ' . $callbackData);
+    //     }
 
-    }
+    // }
 
     elseif (isset($update['message']) && $update['message']['text'] == 'میزان بدهی شما')
     {
@@ -1396,9 +1250,9 @@ if($user["is_verified"] == "approved")
 
         $db->update('users' , $chat_id , ['command'] , [null]);
         $keyboard = [
-            ['🌍 درخواست ها'],
+            ['درخواست ها'],
+            ['پیام های مشتریان'],
             ['🌍 بازگشت به منوی اصلی'],
-            ['🌍 پیام های مشتریان'],
         ];
         $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
         $reply = json_encode($response);
@@ -1406,7 +1260,7 @@ if($user["is_verified"] == "approved")
         $bot->sendMessage($chat_id, 'پنل مدیریت',$reply);
     }
 
-    elseif (isset($update['message']) && $update['message']['text'] == '🌍 درخواست ها')
+    elseif (isset($update['message']) && $update['message']['text'] == 'درخواست ها')
     {
         $db->update('users' , $chat_id , ['command'] , [null]);
         $requests = $db->selectAll("SELECT * FROM `users` WHERE `is_verified` = ?", ['unchecked']);
@@ -1439,7 +1293,7 @@ if($user["is_verified"] == "approved")
         $db->update('users' , $chat_id , ['command'] , [null]);
     }
 
-    elseif (isset($update['message']) && $update['message']['text'] == '🌍 پیام های مشتریان')
+    elseif (isset($update['message']) && $update['message']['text'] == 'پیام های مشتریان')
     {
         $messages = $db->selectAll('SELECT * FROM `support`');
 
