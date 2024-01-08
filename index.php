@@ -23,26 +23,15 @@ $dotenv->load();
 $token = $_ENV['BOT_TOKEN'];
 $panel_username = $_ENV['PANEL_USERNAME'];
 $panel_paswword = $_ENV['PANEL_PASSWORD'];
-
-// $bot = new TelegramBot($token , $panel_username , $panel_paswword);
-// var_dump($bot->testQr('hi'));
-
-
-
-
-
-
-
-
-
-
+$dbUsername = $_ENV['DATABASE_USERNAME'];
+$dbPassword = $_ENV['DATABASE_PASSWORD'];
 
 
 $content = file_get_contents('php://input');
 $update = json_decode($content, true);
 
-$db = new Database();
-$bot = new TelegramBot($token , $panel_username , $panel_paswword);
+$db = new Database($dbUsername,$dbPassword);
+$bot = new TelegramBot($token , $panel_username , $panel_paswword, $dbUsername,$dbPassword);
 $chat_id = $update['message']['chat']['id'];
 $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
 $command = $user['command'];
@@ -80,7 +69,7 @@ if (isset($update['callback_query']))
     if (explode( " " ,$callbackData)[1] == 'config')
     {
 
-        $db = new Database();
+        $db = new Database($dbUsername,$dbPassword);
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
@@ -214,7 +203,7 @@ if (isset($update['callback_query']))
 
 
 
-        $db = new Database();
+        $db = new Database($dbUsername,$dbPassword);
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,explode( " " ,$callbackData)[2]);
@@ -296,7 +285,7 @@ if (isset($update['callback_query']))
 
     elseif(explode( " " ,$callbackData)[0] == 'خرید')
     {
-        $db = new Database();
+        $db = new Database($dbUsername,$dbPassword);
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
@@ -482,7 +471,7 @@ if (isset($update['callback_query']))
 
     elseif(explode( " " ,$callbackData)[0] == 'sub_link')
     {
-        $db = new Database();
+        $db = new Database($dbUsername,$dbPassword);
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
@@ -624,12 +613,12 @@ if($user["is_verified"] == "approved")
         else
         {
             $buttons = [];
-            $db = new Database();
+            $db = new Database($dbUsername,$dbPassword);
             $panels = $db->selectAll("SELECT * FROM panel_users WHERE user_id = ? ", [$chat_id]);
 
             if(count($panels) == 1)
             {
-                $db = new Database();
+                $db = new Database($dbUsername,$dbPassword);
                 $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
                 $message_id = $user['message_id'];
                 $bot->deleteMessage($chat_id,$message_id);
@@ -678,7 +667,7 @@ if($user["is_verified"] == "approved")
                 $panels = $bot->findDefaultPanels();
                 if(count($panels) == 1)
                 {
-                    $db = new Database();
+                    $db = new Database($dbUsername,$dbPassword);
                     $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
                     $message_id = $user['message_id'];
                     $bot->deleteMessage($chat_id,$message_id);
@@ -782,7 +771,7 @@ if($user["is_verified"] == "approved")
     //     if (explode( " " ,$callbackData)[1] == 'config')
     //     {
 
-    //         $db = new Database();
+    //         $db = new Database($dbUsername,$dbPassword);
     //         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
     //         $message_id = $user['message_id'];
     //         $bot->deleteMessage($chat_id,$message_id);
@@ -914,7 +903,7 @@ if($user["is_verified"] == "approved")
 
 
 
-    //     //     $db = new Database();
+    //     //     $db = new Database($dbUsername,$dbPassword);
 
     //     //     $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
     //     //     $message_id = $user['message_id'];
@@ -1103,7 +1092,7 @@ if($user["is_verified"] == "approved")
 
     //     elseif(explode( " " ,$callbackData)[0] == 'sub_link')
     //     {
-    //         $db = new Database();
+    //         $db = new Database($dbUsername,$dbPassword);
     //         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
     //         $message_id = $user['message_id'];
     //         $bot->deleteMessage($chat_id,$message_id);
@@ -1345,7 +1334,7 @@ if($user["is_verified"] == "approved")
 
 
         $buttons = [];
-        $db = new Database();
+        $db = new Database($dbUsername,$dbPassword);
         $panels = $db->selectAll("SELECT * FROM panel_users WHERE user_id = ? ", [$chat_id]);
 
         foreach ($panels as $panel)

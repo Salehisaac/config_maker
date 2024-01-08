@@ -39,7 +39,8 @@ class TelegramBot
     public $limitation;
     public $proxies;
     public $expire;
-
+    private $dbUsername;
+    private $dbPassword;
     public $panelUrl;
 
 
@@ -48,12 +49,14 @@ class TelegramBot
 
 
 
-    public function __construct($botToken , $panel_username , $panel_password)
+    public function __construct($botToken , $panel_username , $panel_password, $dbUsername , $dbPassword)
     {
         $this->botToken = $botToken;
         $this->apiUrl = "https://api.telegram.org/bot{$this->botToken}/";
         $this->panel_username = $panel_username;
         $this->panel_password = $panel_password;
+        $this->dbUsername = $dbUsername;
+        $this->dbPassword = $dbPassword;
     }
 
     /*    public function handelUpdate($update)
@@ -117,7 +120,7 @@ class TelegramBot
 
 
         $url = $this->apiUrl . "sendMessage";
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chatId] );
 
         if($user['is_verified'] == 'approved' && $Myreply == null)
@@ -230,7 +233,7 @@ class TelegramBot
 
     // private function handleProxyOption($chatId, $option)
     // {
-    //     $db = new Database();
+    //     $db = new Database($this->dbUsername , $this->dbPassword);
     //     $user = $db->select("SELECT * FROM users WHERE username = ? " , [$_SESSION['username']]);
     //     $user_id = $user['id'];
 
@@ -316,7 +319,7 @@ class TelegramBot
 
     // private function handlExpireOption($chatId)
     // {
-    //     $db = new Database();
+    //     $db = new Database($this->dbUsername , $this->dbPassword);
 
     //     $content = file_get_contents('php://input');
     //     $update = json_decode($content, true);
@@ -498,7 +501,7 @@ class TelegramBot
 
     function findUser($chat_id)
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
 
         $user = $db->select("SELECT * FROM users WHERE `id` = ? " , [$chat_id] );
 
@@ -512,28 +515,28 @@ class TelegramBot
 
     function findTemplatesForUser($chat_id)
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $result = $db->fetching($chat_id);
         return $result;
     }
 
     function findTemplatesId($chat_id)
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $result = $db->fetching($chat_id);
         return $result;
     }
 
     function findDefaultTemplates()
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $result = $db->fetchDefault();
         return $result;
     }
 
     function findDefaultPanels()
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $panels = $db->selectAll("SELECT * FROM panels WHERE is_default = ?" , [1]);
 
         return $panels;
@@ -628,7 +631,7 @@ class TelegramBot
         $tempFile = tempnam(sys_get_temp_dir(), 'telegram_image');
         file_put_contents($tempFile, $this->testQr($imageData));
 
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
         if($user['is_verified'] == 'approved' && $Myreply == null)
         {
@@ -725,7 +728,7 @@ class TelegramBot
 
     public function search($username)
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $trimmedString = preg_replace('/_\d+$/', '', $username);
         $configs = $db->selectAll("SELECT * FROM `configs` WHERE `name` LIKE ?" , ["%$trimmedString%"]);
         return $configs;
@@ -734,14 +737,14 @@ class TelegramBot
 
     public function searchConfigsBYChatId($chat_id , $panel_id)
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $configs = $db->selectAll("SELECT * FROM `configs` WHERE `user_id` = ? AND `panel_id` = ?  ORDER BY `created_at` DESC LIMIT 30" , [$chat_id , $panel_id]);
         return $configs;
     }
 
     public function directSearch($username, $panel_id)
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id` = ?", [$username, $panel_id]);
         return $config;
     }
@@ -840,7 +843,7 @@ class TelegramBot
 
     function Extend ($panel,$username)
     {
-        $db = new Database();
+        $db = new Database($this->dbUsername , $this->dbPassword);
         $config = $db->select("SELECT * FROM `configs` WHERE `name` = ? AND `panel_id` = ?", [$username, $panel['id']]);
 
         $originalDate = new DateTime($config['expires_at']);

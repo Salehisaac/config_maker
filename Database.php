@@ -6,6 +6,7 @@ date_default_timezone_set('Asia/Tehran');
 use PDO;
 use PDOException;
 
+
 class Database
 {
     private $connection;
@@ -13,16 +14,15 @@ class Database
     // $user['email'];
     private $option = array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4');
 
-
     private $dbHost = 'localhost';
     private $dbName = 'vpn';
-    private $dbUsername = 'debian-sys-maint';
-    private $dbPassword = 'osj3avGjHksLqHh6';
+    // private $dbUsername = $_ENV['DATABASE_USERNAME'];
+    // private $dbPassword = $_ENV['DATABASE_PASSWORD'];
 
-    function __construct()
+    function __construct($dbUsername,$dbPassword)
     {
         try {
-            $this->connection = new PDO("mysql:host=" . $this->dbHost . ";dbname=" . $this->dbName , $this->dbUsername, $this->dbPassword, $this->option);
+            $this->connection = new PDO("mysql:host=" . $this->dbHost . ";dbname=" . $this->dbName , $dbUsername, $dbPassword, $this->option);
 
         } catch (PDOException $e) {
             echo 'error ' . $e->getMessage();
