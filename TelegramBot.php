@@ -191,6 +191,83 @@ class TelegramBot
 
     }
 
+    public function forwardMessage($chat_id , $message_id , $Myreply = null )
+    {
+
+        $db = new Database($this->dbUsername , $this->dbPassword);
+        $user = $db->select("SELECT * FROM users WHERE id = ? ", [$chat_id] );
+
+        if($user['is_verified'] == 'approved' && $Myreply == null)
+        {
+            $keyboard = [
+                ['🌍 کانفیگ های پیشنهادی'],
+                ['🧔 کانفیگ های شما'],
+                ['میزان بدهی شما'],
+                ['تماس با پشتیبانی'],
+            ];
+
+            if($user['is_admin'] == 1)
+            {
+                array_push($keyboard, ['پنل مدیریت']);
+            }
+
+            $response = ['keyboard' => $keyboard, 'resize_keyboard' => true];
+            $reply = json_encode($response);
+        }
+       
+        
+        $apiUrl = "https://api.telegram.org/bot{$this->botToken}";
+
+        if ($Myreply != null)
+        {
+            $forwardMessageRequest = [
+                'chat_id' => $chat_id,
+                'from_chat_id' => $chat_id, 
+                'message_id' => $message_id,
+                'reply_markup' => $Myreply,
+            ];
+        }
+
+        else
+        {
+            $forwardMessageRequest = [
+                'chat_id' => $chat_id,
+                'from_chat_id' => $chat_id, 
+                'message_id' => $message_id,
+                'reply_markup' => $reply,
+            ];
+        }
+        
+
+        
+        $ch = curl_init("$apiUrl/forwardMessage");
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $forwardMessageRequest);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        
+        $response = curl_exec($ch);
+        $result = json_decode($response, true);
+            $messageId = $result['result']['message_id'];
+            curl_close($ch);
+            return $messageId;
+
+
+        
+        if ($response === false) {
+            echo 'Error occurred while forwarding the message: ' . curl_error($ch);
+        } else {
+            
+            $responseData = json_decode($response, true);
+            if ($responseData['ok']) {
+                echo 'Message forwarded successfully!';
+            } else {
+                echo 'Error forwarding the message: ' . $responseData['description'];
+            }
+        }
+
+    }
+
 
 
 
