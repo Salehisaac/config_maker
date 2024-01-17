@@ -967,11 +967,11 @@ class TelegramBot
         {
             $list = (explode('_', $username));
             $last_part = end($list);
-            if ($last_part == '2u' || $last_part == '2m' || $last_part == '3u' || $last_part == '3m')
+            $list_of_postfixs = ['TEST' , '2U' , '3U' , '1U' , 'VIP'];
+            if (in_array($last_part, $list_of_postfixs))
             {
-                $wtest1 = $bot->sendMessage($chat_id, 'detected as 2u2m '.$uesrname);
-                array_pop($list);
-                array_push($list, $i);
+                $wtest1 = $bot->sendMessage($chat_id, 'detected as postfix '.$uesrname);
+                $list[count($list) - 1] = $i;
             }
             elseif (is_int($last_part)){
                 $wtest1 = $bot->sendMessage($chat_id, 'detected as int '.$uesrname);

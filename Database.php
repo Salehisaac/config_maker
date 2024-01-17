@@ -166,14 +166,16 @@ class Database
         foreach (array_combine($fields, $values) as $field => $value) {
             if ($value) {
                 $setClauses[] = "`" . $field . "` = ?";
-            } else {
+            }elseif ($value == 0 || $value == '0'){
+                $setClauses[] = "`" . $field . "` = 0";
+            } 
+            else {
                 $setClauses[] = "`" . $field . "` = NULL";
             }
         }
 
         $sql .= implode(", ", $setClauses);
         $sql .= ", updated_at = NOW() WHERE id = ?";
-
         try {
             $statement = $this->connection->prepare($sql);
             $statement->execute(array_merge(array_filter(array_values($values)), [$id]));

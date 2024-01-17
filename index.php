@@ -333,13 +333,17 @@ if (isset($update['callback_query']))
 
         }
         $configs = $bot->search($username);
+        $list_of_postfixs = ['TEST' , '2U' , '3U' , '1U' , 'VIP'];
         if(count($configs) > 0)
         {
 
             $last_configs_name = explode('_', $configs[sizeof($configs) -1]['name']);
             $last_part_of_name = end($last_configs_name);
+            if (in_array($last_part_of_name , $list_of_postfixs))
+            {
+                $last_part_of_name = $last_configs_name[sizeof($last_configs_name) - 2];
+            }
             $last_part_of_name = intval($last_part_of_name);
-
             if (is_int($last_part_of_name))
             {
                 $last_number = $last_part_of_name;
@@ -356,13 +360,13 @@ if (isset($update['callback_query']))
         if ($number !== 1){
             $username = $username .'_'. $number;
         }
-
-        $username = $bot->validName($username , $panel['url'] , $number);
+        
         $postfix = $selected['postfix'];
         if($postfix !== null)
         {
             $username = $username . '_' . $postfix;
         }
+        $username = $bot->validName($username , $panel['url'] , $number);
 
 
         $proxies = json_decode($selected['proxy'] , true);
@@ -439,6 +443,10 @@ if (isset($update['callback_query']))
             $bot->sendImage($chat_id, $config, $config, $username );
             $user = $db->selectAll("SELECT * FROM users WHERE `id` = ? " , [$chat_id]);
             $indebtedness = $user[0]['indebtedness'];
+            if ($indebtedness == null)
+            {
+                $indebtedness = 0;
+            }
             $indebtedness += $price;
             $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
         }
@@ -460,6 +468,10 @@ if (isset($update['callback_query']))
         $price = $config['price'];
         $indebtedness = $db_user['indebtedness'];
         $indebtedness -= $price;
+        if($indebtedness < 0)
+        {
+            $indebtedness = 0;
+        }
         $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
         $message_id = $db_user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
@@ -512,12 +524,16 @@ if (isset($update['callback_query']))
         $price = $config['price'];
         $indebtedness = $user['indebtedness'];
         $indebtedness += $price;
+        if ($price == 0){
+            $bot->sendMessage($chat_id , 'کانفیگ های تست قابلیت تمدید ندارند');    
+        }
+        else{
         $db->update('users' , $chat_id, ['indebtedness'] , [$indebtedness]);
         $bot->sendMessage($chat_id , 'کانفیگ شما اپدیت شد');
         $url = $panel['url'] . $marzban_config;
         $QRCode = $bot->makeQRcode($url);
         $bot->sendImage($chat_id, $QRCode, $url, explode( " " ,$callbackData)[1]);
-
+        }
 
     }
 
@@ -594,15 +610,12 @@ if (isset($update['callback_query']))
         $message_id = $user['message_id'];
         $bot->deleteMessage($chat_id,$message_id);
         $target_user_chat_id = explode( " " ,$callbackData)[1];
-
-        $db->update('users', $target_user_chat_id, ['indebtedness'], [0]);
-        $bot->sendMessage($chat_id , 'انجام شد');
+        $indebtedness = 0;
+        $db->update('users', $target_user_chat_id, ['indebtedness'], [$indebtedness]);
+        $customer = $db->select("SELECT * FROM users WHERE id = ? ", [$target_user_chat_id]);
+        $text = "{$target_user_chat_id} now have {$customer['indebtedness']} indebtedness";
+        $bot->sendMessage($chat_id , $text,NULL);
         $bot->sendMessage($target_user_chat_id , 'درخواست تصفیه حساب شما توسط ادمین تایید شد');
-
-
-        
-
-
     }
 
     elseif(explode( " " ,$callbackData)[0] == 'disapprove')
