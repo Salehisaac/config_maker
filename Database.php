@@ -144,10 +144,12 @@ class Database
     {
         try {
             $this->connection->query("SET time_zone = '+03:30'");
-            $statement = $this->connection->prepare("INSERT INTO " . $tableName . "(" . implode(', ', $fields) . " , created_at) VALUES( :" . implode(', :', $fields) . " , now() );");
-            $statement->execute(array_combine($fields, $values));
-            // ['email' => 'hassan@yahoo.com', 'age' => 30];
+            $query = "INSERT INTO $tableName (" . implode(', ', $fields) . ") VALUES (:" . implode(', :', $fields) . ");";
+            $statement = $this->connection->prepare($query);
+            $data = array_combine($fields, $values);
+            $statement->execute($data);
             return true;
+            
         } catch (PDOException $e) {
             echo 'error ' . $e->getMessage();
             return false;

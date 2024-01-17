@@ -358,7 +358,11 @@ if (isset($update['callback_query']))
         }
 
         $username = $bot->validName($username , $panel['url'] , $number);
-
+        $postfix = $selected['postfix'];
+        if($postfix !== null)
+        {
+            $username = $username . '_' . $postfix;
+        }
 
 
         $proxies = json_decode($selected['proxy'] , true);
@@ -865,10 +869,8 @@ if($user["is_verified"] == "approved")
     //this fs for support panel
     elseif (isset($update['message']) && $update['message']['text'] == 'تماس با پشتیبانی')
     {
-
         $bot->sendMessage($chat_id,' لطفا پیغام خود را بفرستید' ,$reply);
         $db->update('users' , $chat_id , ['command'] , ['support']);
-
     }
     elseif (isset($update['message']) && $update['message']['text'] == '🧔 کانفیگ های شما')
     {
@@ -944,26 +946,15 @@ if($user["is_verified"] == "approved")
 
     elseif (isset($update['message']) && $update['message']['text'] == 'تسویه حساب')
     {
-
         if($user['indebtedness'] !== 0 && $user['indebtedness'] !== null)
         {
             $bot->sendMessage($chat_id , 'درخواست شما ارسال شد
-            رسید خود را برای ادمین ارسال کنید
-            منتظر تایدیه بمانید');
+            رسید خود را برای ادمین ارسال کنید .منتظر تایید بمانید');
             $text =  $text = "یک درخواست تصفیه برای شما ارسال شد
-
             ----------------------------------------------------------------
-            
             {$user['name']}
-    
             -----------------------------------------------------------------
-    
-            میزان بدهی
-    
-            {$user['indebtedness']}
-    
-            هزار تومن
-            
+            میزان بدهی : {$user['indebtedness']}
             ";
     
             $buttons = [];
@@ -1057,11 +1048,8 @@ if($user["is_verified"] == "approved")
                         $buttons
 
                 ]);
-
-
-
                 $sent_message = $message['message'] ;
-                $text = "پیام از طرف : ". $message['username'] ." ". $message['name'] . " ". $message['chat_id']  . "\n" . "متن پیام : {$sent_message}";
+                $text = "پیام از طرف : ". $message['username'] ." ". $message['name'] . "\n" . "متن پیام : {$sent_message}";
 
                 $bot->sendMessage($chat_id , $text , $replyMarkup );
                 $buttons = [];
@@ -1069,11 +1057,6 @@ if($user["is_verified"] == "approved")
         }
 
     }
-
-
-
-
-
 
     elseif (isset($update['message']) && $command == 'alter_name')
     {
@@ -1122,10 +1105,21 @@ if($user["is_verified"] == "approved")
 
     elseif (isset($update['message']) && $command == 'support')
     {
-
-        $bot->sendMessage($chat_id , 'پیغام شما با موفقیت ارسال شد به زودی پاسخ خود را از طریق همین ربات دریافت خواهید کرد');
-        $db->insert('support' , ['chat_id' , 'message' , 'name'] , [$chat_id , $update['message']['text'] ,$user['name'] ]);
+        $user = $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
+        $text = "یه پیغام از طرف : {$user['username']}
+        ----------------------------------------------------------------
+        {$update['message']['text']}
+        " . $chat_id;
+        $message_id = $bot->sendMessage(135629482 , $text , NULL);
+        $check = $db->insert('support' , ['chat_id' , 'username' , 'message'] , [$chat_id , $user['username'] , $update['message']['text'] ]);
+        if ($check == true){
+            $bot->sendMessage($chat_id , 'پیغام شما با موفقیت ارسال شد به زودی پاسخ خود را از طریق همین ربات دریافت خواهید کرد');
+        }
+        else{
+            $bot->sendMessage($chat_id , 'مشکلی پیش آمده لطفا دوباره امتحان کنید');
+        }
         $db->update('users' , $chat_id , ['command'] , [null]);
+        $message_id = $bot->sendMessage(135629482 , $text , NULL);
 
     }
 
@@ -1134,30 +1128,21 @@ if($user["is_verified"] == "approved")
 
         $target_user_id = $user['message'];
         $message = $db->select('SELECT * FROM `support` WHERE `id` = ?' , [explode( " " ,$target_user_id)[1]]);
-
         $text = "ادمین در جواب این پیام شما پاسخی ارسال کرد 
-
         ----------------------------------------------------------------
-        
         {$message['message']}
-
-        -----------------------------------------------------------------
-
+        ----------------------------------------------------------------
         {$update['message']['text']}
-        
-        
         ";
 
 
         $bot->sendMessage(explode( " " ,$target_user_id)[0] , $text );
         $db->deleteMessage('support' ,explode( " " ,$target_user_id)[1] );
-
-
     }
 
     elseif (isset($update['message']) && $command == 'payment')
     {
-
+        $user = $db->select('SELECT * FROM `users` WHERE `id` = ?', [$chat_id]);
         $bot->sendmessage($chat_id , 'درخواست شما ارسال شد لطفا منتظر تاییدیه ادمین بمانید');
         $buttons[] = [
             ['text' => 'تایید و تسویه', 'callback_data' => 'payment ' . $chat_id],
@@ -1167,26 +1152,18 @@ if($user["is_verified"] == "approved")
         $replyMarkup = json_encode([
             'inline_keyboard' => $buttons
         ]);
+        
+        $text= "یک درخواست تصفیه برای شما ارسال شد
+        ----------------------------------------------------------------
+        {$user['name']}
+        ----------------------------------------------------------------
+        میزان بدهی : {$user['indebtedness']}
+        
+        پیام زیر مربوط به این درخواست است :
+        ";
 
         $messageId = $update['message']['message_id'];
         $bot->forwardMessage(135629482 , $messageId , $replyMarkup);
-
-        $text= "یک درخواست تصفیه برای شما ارسال شد
-
-        ----------------------------------------------------------------
-        
-        {$user['name']}
-
-        -----------------------------------------------------------------
-
-        میزان بدهی
-
-        {$user['indebtedness']}
-
-        هزار تومن
-        
-        ";
-
         $bot->sendmessage(135629482 , $text , $replyMarkup);
         $db->update('users' , $chat_id , ['command'] , [null]);
     }
@@ -1199,16 +1176,12 @@ if($user["is_verified"] == "approved")
 
 elseif($user['is_verified'] == 'unchecked')
 {
-
-
     $buttons[] = [['text' => 'تماس با پشتیبانی', 'url' => 'https://t.me/RajaTeam_support' ]];
 
     $replyMarkup = json_encode([
         'inline_keyboard' =>
             $buttons
-
     ]);
-
     $bot->sendMessage($chat_id , 'لطفا منتظر تایید ادمین بمانید' , $replyMarkup);
 }
 
