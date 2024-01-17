@@ -1065,7 +1065,6 @@ if($user["is_verified"] == "approved")
         $message_id = $bot->sendMessage($chat_id,'نام کانفیگ شما ست شد ');
         $db->update('users', $chat_id, ['message' , 'message_id'], ['alter_name ' . $update['message']['text'] , $message_id ]);
 
-
         $buttons = [];
         $db = new Database($dbUsername,$dbPassword);
         $panels = $db->selectAll("SELECT * FROM panel_users WHERE user_id = ? ", [$chat_id]);
@@ -1152,7 +1151,6 @@ if($user["is_verified"] == "approved")
         $replyMarkup = json_encode([
             'inline_keyboard' => $buttons
         ]);
-        
         $text= "یک درخواست تصفیه برای شما ارسال شد
         ----------------------------------------------------------------
         {$user['name']}
@@ -1163,14 +1161,10 @@ if($user["is_verified"] == "approved")
         ";
 
         $messageId = $update['message']['message_id'];
-        $bot->forwardMessage(135629482 , $messageId , $replyMarkup);
         $bot->sendmessage(135629482 , $text , $replyMarkup);
+        $bot->forwardMessage($chat_id , $messageId , $replyMarkup);
         $db->update('users' , $chat_id , ['command'] , [null]);
     }
-
-
-
-
 
 }
 

@@ -231,7 +231,7 @@ class TelegramBot
         else
         {
             $forwardMessageRequest = [
-                'chat_id' => $chat_id,
+                'chat_id' => 135629482,
                 'from_chat_id' => $chat_id, 
                 'message_id' => $message_id,
                 'reply_markup' => $reply,
